@@ -16,11 +16,9 @@ public:
     Thread();
     ~Thread();
 
-    void start();
-    void stop();
-    void join();
-    bool shouldStop();
-    bool isRunning();
+    virtual void start() final;
+    virtual void stop() final;
+    virtual void join() final;
+    virtual bool shouldStop() final;
+    virtual bool isRunning() final;
 };
-
-
