@@ -8,9 +8,10 @@
 #include <thread>
 
 #include "Server.h"
+#include "Connection.h"
 
 Server::Server(uint16_t port, std::string ipAddress)
-    : shouldTerminate_{false},
+    : shouldTerminate_{false}
 {
     memset(&serverAddress_, 0, sizeof(serverAddress_));
 
@@ -31,6 +32,11 @@ Server::Server(uint16_t port, std::string ipAddress)
 
 void Server::run()
 {
+    acceptConnections_();
+}
+
+void Server::acceptConnections_()
+{
     int returnValue;
 
     // create the socket
@@ -38,7 +44,11 @@ void Server::run()
 
     // set the socket option to reuse address
     int parameter = 1;
-    returnValue = setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const void *>(&parameter), sizeof(parameter));
+    returnValue = setsockopt(serverSocket,
+                             SOL_SOCKET,
+                             SO_REUSEADDR,
+                             reinterpret_cast<const void *>(&parameter),
+                             sizeof(parameter));
 
     if (returnValue == -1) {
         throw ServerException("error while setting the socket options" + std::string{strerror(errno)});
@@ -47,14 +57,14 @@ void Server::run()
     // bind address to the socket
     returnValue = bind(serverSocket, reinterpret_cast<sockaddr *>(&serverAddress_), sizeof(serverAddress_));
 
-    if (returnValue != 0){
+    if (returnValue != 0) {
         throw ServerException("error while binding the server address to the socket: " + std::string{strerror(errno)});
     }
 
     // start listening on the socket
     returnValue = listen(serverSocket, 5);
 
-    if (returnValue != 0){
+    if (returnValue != 0) {
         throw ServerException("error while starting to listen on the socket: " + std::string{strerror(errno)});
     }
 
@@ -69,22 +79,54 @@ void Server::run()
             throw ServerException("error while accepting the connection: " + std::string{strerror(errno)});
         }
 
-        Connection connection{clientSocket, clientAddress};
-
-        // create an own thread for the new connection
-        try {
-            std::thread thread(&Connection::listen, connection);
-        }
-        catch (std::exception &exception) {
-            throw ServerException("could not create a new thread for the incoming connection");
-        }
-
-
-        // TODO: handle thread watching
+        // handle the new connection
+        handleConnection_(clientSocket, clientAddress);
     }
 }
 
 void Server::terminate()
 {
     shouldTerminate_ = true;
+}
+
+uint32_t Server::nextConnectionUid_()
+{
+    uint32_t uid{0};
+
+    for (auto &uidConnection : connections_) {
+        if (uid != uidConnection.first) {
+            break;
+        }
+
+        if (uid == UINT32_MAX) {
+            throw ServerException("no more connection uids available");
+        }
+
+        uid++;
+    }
+
+    return uid;
+}
+
+void Server::handleConnection_(int socket, sockaddr_in address)
+{
+    std::unique_lock<std::mutex> lock{connectionsMutex_};
+
+    uint32_t uid = nextConnectionUid_();
+    Server *server = this;
+
+    auto inserted = connections_.emplace(std::piecewise_construct,
+                                         std::forward_as_tuple(uid),
+                                         std::forward_as_tuple(socket, address, uid, server));
+
+    Connection &connection = inserted.first->second;
+
+    connection.start();
+}
+
+void Server::removeConnection_(uint32_t uid)
+{
+    std::unique_lock<std::mutex> lock{connectionsMutex_};
+
+    connections_.erase(connections_.find(uid));
 }
