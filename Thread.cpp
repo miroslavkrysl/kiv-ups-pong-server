@@ -15,7 +15,8 @@ void Thread::start()
         return;
     }
 
-    thread_ = std::make_unique<std::thread>(&Thread::run_, this);
+    shouldStop_ = false;
+    thread_ = std::make_unique<std::thread>(&Thread::run, this);
     thread_->detach();
 }
 
