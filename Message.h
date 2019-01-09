@@ -16,7 +16,7 @@ public:
 
     Message() = delete;
     virtual std::string toLogString() = 0;
-    virtual std::string serialize() = 0;
+    virtual std::string serialize() const = 0;
 };
 
 
