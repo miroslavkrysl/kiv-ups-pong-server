@@ -34,6 +34,7 @@ Server::Server(uint16_t port, std::string ipAddress, Logger &logger)
 
 void Server::run()
 {
+    stats.setStarted(std::chrono::system_clock::now());
     acceptConnections();
 }
 

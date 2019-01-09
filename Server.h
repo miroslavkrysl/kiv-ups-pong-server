@@ -16,6 +16,7 @@ class Connection;
 class Server
 {
     Logger &logger;
+    Stats stats;
 
     sockaddr_in serverAddress;
     bool shouldTerminate;
