@@ -10,19 +10,19 @@ class Server;
 
 class Connection: public Thread
 {
-    int socket_;
-    sockaddr_in address_;
-    uint32_t uid_;
-    Server *server_;
+    int socket;
+    sockaddr_in address;
+    uint32_t uid;
+    Server *server;
 
-    const int CORRUPTED_MESSAGES_LIMIT_;
-    const std::chrono::duration<int> RECONNECTION_TIME_LIMIT_;
+    const int CORRUPTED_MESSAGES_LIMIT;
+    const std::chrono::duration<int> RECONNECTION_TIME_LIMIT;
     const timeval RECV_TIMEOUT;
 
-    bool disconnected_;
-    bool identified_;
+    bool disconnected;
+    bool identified;
 
-    void closeSocket_();
+    void closeSocket();
 
 public:
     Connection(int socket, sockaddr_in address, uint32_t uid, Server *server);
@@ -31,8 +31,8 @@ public:
     void send(const Message &message);
     void run() override;
 
-    bool disconnected();
-    bool closed();
+    bool isDisconnected();
+    bool isClosed();
 };
 
 class ConnectionException: public std::runtime_error

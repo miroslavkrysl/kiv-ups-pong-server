@@ -6,14 +6,14 @@
 #include "Server.h"
 
 Connection::Connection(int socket, sockaddr_in address, uint32_t uid, Server *server)
-    : socket_{socket},
-      address_{address},
-      uid_{uid},
-      server_{server},
-      disconnected_{false},
-      identified_{false},
-      CORRUPTED_MESSAGES_LIMIT_{5},
-      RECONNECTION_TIME_LIMIT_{30},
+    : socket{socket},
+      address{address},
+      uid{uid},
+      server{server},
+      disconnected{false},
+      identified{false},
+      CORRUPTED_MESSAGES_LIMIT{5},
+      RECONNECTION_TIME_LIMIT{30},
       RECV_TIMEOUT{10, 0}
 {
 }
@@ -26,11 +26,11 @@ void Connection::run()
     auto disconnectedFrom = std::chrono::steady_clock::now();
 
     // set socket recv timeout
-    setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const void *>(&RECV_TIMEOUT), sizeof(RECV_TIMEOUT));
+    setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const void *>(&RECV_TIMEOUT), sizeof(RECV_TIMEOUT));
 
     while (!shouldStop()) {
 
-        ssize_t bytesRead = recv(socket_, buffer, sizeof(buffer), 0);
+        ssize_t bytesRead = recv(socket, buffer, sizeof(buffer), 0);
 
         if (bytesRead == -1) {
             // an error occured
@@ -40,17 +40,17 @@ void Connection::run()
                 || errno == ECONNRESET) {
                 // network errors, try to reconnect
 
-                if (!disconnected_) {
-                    disconnected_ = true;
+                if (!disconnected) {
+                    disconnected = true;
                     disconnectedFrom = std::chrono::steady_clock::now();
                 }
 
                 auto now = std::chrono::steady_clock::now();
                 auto disconnectedTime = now - disconnectedFrom;
 
-                if (disconnectedTime > RECONNECTION_TIME_LIMIT_) {
+                if (disconnectedTime > RECONNECTION_TIME_LIMIT) {
                     // disconnected too long
-                    closeSocket_();
+                    closeSocket();
                     break;
                 }
 
@@ -58,14 +58,14 @@ void Connection::run()
             }
             else {
                 // unrecoverable error
-                closeSocket_();
+                closeSocket();
                 break;
             }
         }
 
         if (bytesRead == 0) {
             // player orderly disconnected
-            closeSocket_();
+            closeSocket();
             break;
         }
 
@@ -78,7 +78,7 @@ void Connection::run()
 
                 try {
                     Message message = Message::parse(data);
-                    server_.handleMessage(message);
+                    server.handleMessage(message);
                     corruptedMessages = 0;
                 }
                 catch (MessageException &exception) {
@@ -100,38 +100,38 @@ void Connection::run()
             corruptedMessages++;
         }
 
-        if (corruptedMessages > CORRUPTED_MESSAGES_LIMIT_) {
+        if (corruptedMessages > CORRUPTED_MESSAGES_LIMIT) {
             // connection probably corrupted
-            closeSocket_();
+            closeSocket();
             break;
         }
 
-        disconnected_ = false;
+        disconnected = false;
     }
 }
 
 void Connection::send(const Message &message)
 {
-    if (disconnected() || closed()) {
+    if (isDisconnected() || isClosed()) {
         throw ConnectionException("cant send data to the connection");
     }
 
     std::string contents = message.serialize();
-    ::send(socket_, contents.c_str(), contents.length(), 0);
+    ::send(socket, contents.c_str(), contents.length(), 0);
 }
 
-bool Connection::disconnected()
+bool Connection::isDisconnected()
 {
-    return disconnected_;
+    return disconnected;
 }
 
-bool Connection::closed()
+bool Connection::isClosed()
 {
-    return socket_ == -1;
+    return socket == -1;
 }
 
-void Connection::closeSocket_()
+void Connection::closeSocket()
 {
-    ::close(socket_);
-    socket_ = -1;
+    ::close(socket);
+    socket = -1;
 }
