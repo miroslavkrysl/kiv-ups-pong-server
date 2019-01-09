@@ -13,7 +13,7 @@ class Connection: public Thread
     int socket;
     sockaddr_in address;
     uint32_t uid;
-    Server *server;
+    Server &server;
 
     const int CORRUPTED_MESSAGES_LIMIT;
     const std::chrono::duration<int> RECONNECTION_TIME_LIMIT;
@@ -25,7 +25,7 @@ class Connection: public Thread
     void closeSocket();
 
 public:
-    Connection(int socket, sockaddr_in address, uint32_t uid, Server *server);
+    Connection(int socket, sockaddr_in address, uint32_t uid, Server &server);
     Connection(const Connection &connection) = delete;
 
     void send(const Message &message);

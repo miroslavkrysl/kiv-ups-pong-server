@@ -5,7 +5,7 @@
 #include "Connection.h"
 #include "Server.h"
 
-Connection::Connection(int socket, sockaddr_in address, uint32_t uid, Server *server)
+Connection::Connection(int socket, sockaddr_in address, uint32_t uid, Server &server)
     : socket{socket},
       address{address},
       uid{uid},
