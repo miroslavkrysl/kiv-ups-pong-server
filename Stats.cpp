@@ -15,7 +15,6 @@ Stats::Stats()
 void Stats::setStarted(const std::chrono::system_clock::time_point &started)
 {
     Stats::started = started;
-    std::unique_lock<std::mutex>
 }
 
 void Stats::addMessagesReceived(uint64_t count)
