@@ -97,16 +97,30 @@ void Server::terminate()
 uint32_t Server::nextConnectionUid_()
 {
     uint32_t uid{0};
+    auto max = connections.rbegin();
 
-    for (auto &uidConnection : connections) {
-        if (uid != uidConnection.first) {
-            break;
+    if (max == connections.rend()) {
+        return uid;
+    }
+
+    uid = max->first;
+
+    if (uid == UINT32_MAX) {
+        uid = 0;
+
+        for (auto &uidConnection : connections) {
+            if (uid != uidConnection.first) {
+                break;
+            }
+
+            if (uid == UINT32_MAX) {
+                throw ServerException("no more connection uids available");
+            }
+
+            uid++;
         }
-
-        if (uid == UINT32_MAX) {
-            throw ServerException("no more connection uids available");
-        }
-
+    }
+    else {
         uid++;
     }
 
