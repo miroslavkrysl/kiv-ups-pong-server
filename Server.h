@@ -9,11 +9,14 @@
 
 #include "Connection.h"
 #include "Player.h"
+#include "Logger.h"
 
 class Connection;
 
 class Server
 {
+    Logger &logger_;
+
     sockaddr_in serverAddress_;
     bool shouldTerminate_;
 
@@ -30,7 +33,7 @@ class Server
     void acceptConnections_();
 
 public:
-    explicit Server(uint16_t port, std::string ipAddress = "");
+    explicit Server(uint16_t port, std::string ipAddress, Logger &logger_);
     void run();
     void terminate();
 };

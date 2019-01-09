@@ -9,9 +9,11 @@
 
 #include "Server.h"
 #include "Connection.h"
+#include "Logger.h"
 
-Server::Server(uint16_t port, std::string ipAddress)
-    : shouldTerminate_{false}
+Server::Server(uint16_t port, std::string ipAddress, Logger &logger)
+    : shouldTerminate_{false},
+    logger_(logger)
 {
     memset(&serverAddress_, 0, sizeof(serverAddress_));
 
