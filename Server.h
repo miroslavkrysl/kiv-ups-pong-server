@@ -7,16 +7,16 @@
 #include <map>
 #include <unordered_map>
 
+#include "MessageHandler.h"
 #include "Connection.h"
 #include "Player.h"
 #include "Logger.h"
-
-class Connection;
 
 class Server
 {
     Logger &logger;
     Stats stats;
+    MessageHandler messageHandler;
 
     sockaddr_in serverAddress;
     bool shouldTerminate;

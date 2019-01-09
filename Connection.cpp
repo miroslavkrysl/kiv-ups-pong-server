@@ -3,18 +3,18 @@
 #include <thread>
 
 #include "Connection.h"
-#include "Server.h"
+#include "MessageHandler.h"
 
-Connection::Connection(int socket, sockaddr_in address, uint32_t uid, Server &server)
+Connection::Connection(int socket, sockaddr_in address, uint32_t uid, MessageHandler &messageHandler)
     : socket{socket},
       address{address},
       uid{uid},
-      server{server},
       disconnected{false},
       identified{false},
       CORRUPTED_MESSAGES_LIMIT{5},
       RECONNECTION_TIME_LIMIT{30},
-      RECV_TIMEOUT{10, 0}
+      RECV_TIMEOUT{10, 0},
+      messageHandler{messageHandler}
 {
 }
 
@@ -77,8 +77,8 @@ void Connection::run()
                 // if find, the whole message was received
 
                 try {
-                    Message message = Message::parse(data);
-                    server.handleMessage(message);
+                    std::unique_ptr<Message> message = Message::parse(data);
+                    messageHandler.handleMessage(*this, std::move(message));
                     corruptedMessages = 0;
                 }
                 catch (MessageException &exception) {
@@ -110,7 +110,7 @@ void Connection::run()
     }
 }
 
-void Connection::send(const Message &message)
+void Connection::send(Message &message)
 {
     if (isDisconnected() || isClosed()) {
         throw ConnectionException("cant send data to the connection");
@@ -135,3 +135,4 @@ void Connection::closeSocket()
     ::close(socket);
     socket = -1;
 }
+

@@ -4,16 +4,14 @@
 
 #include "Message.h"
 #include "Thread.h"
-#include "Server.h"
-
-class Server;
+#include "MessageHandler.h"
 
 class Connection: public Thread
 {
     int socket;
     sockaddr_in address;
     uint32_t uid;
-    Server &server;
+    MessageHandler &messageHandler;
 
     const int CORRUPTED_MESSAGES_LIMIT;
     const std::chrono::duration<int> RECONNECTION_TIME_LIMIT;
@@ -25,10 +23,10 @@ class Connection: public Thread
     void closeSocket();
 
 public:
-    Connection(int socket, sockaddr_in address, uint32_t uid, Server &server);
+    Connection(int socket, sockaddr_in address, uint32_t uid, MessageHandler &messageHandler);
     Connection(const Connection &connection) = delete;
 
-    void send(const Message &message);
+    void send(Message &message);
     void run() override;
 
     bool isDisconnected();
