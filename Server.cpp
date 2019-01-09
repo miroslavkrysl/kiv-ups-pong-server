@@ -12,21 +12,21 @@
 #include "Logger.h"
 
 Server::Server(uint16_t port, std::string ipAddress, Logger &logger)
-    : shouldTerminate_{false},
-    logger_(logger)
+    : shouldTerminate{false},
+    logger(logger)
 {
-    memset(&serverAddress_, 0, sizeof(serverAddress_));
+    memset(&serverAddress, 0, sizeof(serverAddress));
 
-    serverAddress_.sin_family = AF_INET;
-    serverAddress_.sin_port = htons(port);
+    serverAddress.sin_family = AF_INET;
+    serverAddress.sin_port = htons(port);
 
     if (ipAddress.empty()) {
-        serverAddress_.sin_addr.s_addr = INADDR_ANY;
+        serverAddress.sin_addr.s_addr = INADDR_ANY;
     }
     else {
-        serverAddress_.sin_addr.s_addr = inet_addr(ipAddress.c_str());
+        serverAddress.sin_addr.s_addr = inet_addr(ipAddress.c_str());
 
-        if (serverAddress_.sin_addr.s_addr == INADDR_NONE) {
+        if (serverAddress.sin_addr.s_addr == INADDR_NONE) {
             throw ServerException("server ip address is in wrong format");
         }
     }
@@ -34,10 +34,10 @@ Server::Server(uint16_t port, std::string ipAddress, Logger &logger)
 
 void Server::run()
 {
-    acceptConnections_();
+    acceptConnections();
 }
 
-void Server::acceptConnections_()
+void Server::acceptConnections()
 {
     int returnValue;
 
@@ -57,7 +57,7 @@ void Server::acceptConnections_()
     }
 
     // bind address to the socket
-    returnValue = bind(serverSocket, reinterpret_cast<sockaddr *>(&serverAddress_), sizeof(serverAddress_));
+    returnValue = bind(serverSocket, reinterpret_cast<sockaddr *>(&serverAddress), sizeof(serverAddress));
 
     if (returnValue != 0) {
         throw ServerException("error while binding the server address to the socket: " + std::string{strerror(errno)});
@@ -71,7 +71,7 @@ void Server::acceptConnections_()
     }
 
     // loop for accepting new connections
-    while (!shouldTerminate_) {
+    while (!shouldTerminate) {
         sockaddr_in clientAddress{};
         socklen_t addressSize = sizeof(in_addr_t);
 
@@ -82,20 +82,20 @@ void Server::acceptConnections_()
         }
 
         // handle the new connection
-        handleConnection_(clientSocket, clientAddress);
+        handleConnection(clientSocket, clientAddress);
     }
 }
 
 void Server::terminate()
 {
-    shouldTerminate_ = true;
+    shouldTerminate = true;
 }
 
 uint32_t Server::nextConnectionUid_()
 {
     uint32_t uid{0};
 
-    for (auto &uidConnection : connections_) {
+    for (auto &uidConnection : connections) {
         if (uid != uidConnection.first) {
             break;
         }
@@ -110,14 +110,14 @@ uint32_t Server::nextConnectionUid_()
     return uid;
 }
 
-void Server::handleConnection_(int socket, sockaddr_in address)
+void Server::handleConnection(int socket, sockaddr_in address)
 {
-    std::unique_lock<std::mutex> lock{connectionsMutex_};
+    std::unique_lock<std::mutex> lock{connectionsMutex};
 
     uint32_t uid = nextConnectionUid_();
     Server *server = this;
 
-    auto inserted = connections_.emplace(std::piecewise_construct,
+    auto inserted = connections.emplace(std::piecewise_construct,
                                          std::forward_as_tuple(uid),
                                          std::forward_as_tuple(socket, address, uid, server));
 
@@ -126,9 +126,9 @@ void Server::handleConnection_(int socket, sockaddr_in address)
     connection.start();
 }
 
-void Server::removeConnection_(uint32_t uid)
+void Server::removeConnection(uint32_t uid)
 {
-    std::unique_lock<std::mutex> lock{connectionsMutex_};
+    std::unique_lock<std::mutex> lock{connectionsMutex};
 
-    connections_.erase(connections_.find(uid));
+    connections.erase(connections.find(uid));
 }

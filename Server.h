@@ -15,22 +15,22 @@ class Connection;
 
 class Server
 {
-    Logger &logger_;
+    Logger &logger;
 
-    sockaddr_in serverAddress_;
-    bool shouldTerminate_;
+    sockaddr_in serverAddress;
+    bool shouldTerminate;
 
-    std::map<uint32_t, Connection> connections_;
-    std::unordered_map<std::string, Player> players_;
+    std::map<uint32_t, Connection> connections;
+    std::unordered_map<std::string, Player> players;
 
-    std::mutex connectionsMutex_;
-    std::mutex playersMutex_;
+    std::mutex connectionsMutex;
+    std::mutex playersMutex;
 
     uint32_t nextConnectionUid_();
-    void handleConnection_(int socket, sockaddr_in address);
-    void removeConnection_(uint32_t uid);
+    void handleConnection(int socket, sockaddr_in address);
+    void removeConnection(uint32_t uid);
 
-    void acceptConnections_();
+    void acceptConnections();
 
 public:
     explicit Server(uint16_t port, std::string ipAddress, Logger &logger_);
