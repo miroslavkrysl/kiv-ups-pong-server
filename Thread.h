@@ -6,8 +6,8 @@
 
 class Thread
 {
-    std::unique_ptr<std::thread> thread_;
-    bool shouldStop_;
+    std::unique_ptr<std::thread> thread;
+    bool terminate;
 public:
 
     Thread();

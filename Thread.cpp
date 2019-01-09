@@ -1,7 +1,7 @@
 #include "Thread.h"
 
 Thread::Thread()
-    : shouldStop_{false}
+    : terminate{false}
 {}
 
 Thread::~Thread()
@@ -11,42 +11,42 @@ Thread::~Thread()
 
 void Thread::start()
 {
-    if (thread_) {
+    if (thread) {
         return;
     }
 
-    shouldStop_ = false;
-    thread_ = std::make_unique<std::thread>(&Thread::run, this);
-    thread_->detach();
+    terminate = false;
+    thread = std::make_unique<std::thread>(&Thread::run, this);
+    thread->detach();
 }
 
 void Thread::stop()
 {
-    if (thread_ == nullptr) {
+    if (thread == nullptr) {
         return;
     }
 
-    shouldStop_ = true;
-    thread_->join();
+    terminate = true;
+    thread->join();
 
-    thread_.reset();
+    thread.reset();
 }
 
 void Thread::join()
 {
-    if (thread_ == nullptr) {
+    if (thread == nullptr) {
         return;
     }
 
-    thread_->join();
+    thread->join();
 }
 
 bool Thread::shouldStop()
 {
-    return shouldStop_;
+    return terminate;
 }
 
 bool Thread::isRunning()
 {
-    return thread_ != nullptr;
+    return thread != nullptr;
 }
