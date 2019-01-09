@@ -37,6 +37,7 @@ public:
     explicit Server(uint16_t port, std::string ipAddress, Logger &logger_);
     void run();
     void terminate();
+    Stats &getStats();
 };
 
 class ServerException: public std::runtime_error

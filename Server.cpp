@@ -133,3 +133,8 @@ void Server::removeConnection(uint32_t uid)
 
     connections.erase(connections.find(uid));
 }
+
+Stats &Server::getStats()
+{
+    return stats;
+}
