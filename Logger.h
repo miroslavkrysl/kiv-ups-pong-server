@@ -7,9 +7,9 @@
 
 class Logger
 {
-    std::fstream baseLogFile_;
-    std::fstream communicationLogFile_;
-    std::fstream statsFile_;
+    std::fstream baseLogFile;
+    std::fstream communicationLogFile;
+    std::fstream statsFile;
 public:
     Logger(std::string baseLogFile, std::string communicationLogFile, std::string statsFile);
     virtual ~Logger();
