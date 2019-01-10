@@ -3,18 +3,19 @@
 #include <thread>
 
 #include "Connection.h"
-#include "MessageHandler.h"
+#include "Packet.h"
+#include "Server.h"
 
-Connection::Connection(int socket, sockaddr_in address, uint32_t uid, MessageHandler &messageHandler)
+Connection::Connection(int socket, sockaddr_in address, uint32_t uid, Server &server)
     : socket{socket},
       address{address},
       uid{uid},
       disconnected{false},
       identified{false},
-      CORRUPTED_MESSAGES_LIMIT{5},
+      CORRUPTED_PACKETS_LIMIT{5},
       RECONNECTION_TIME_LIMIT{30},
       RECV_TIMEOUT{10, 0},
-      messageHandler{messageHandler}
+      server{server}
 {
 }
 
@@ -22,7 +23,7 @@ void Connection::run()
 {
     char buffer[1024];
     std::string data;
-    int corruptedMessages{0};
+    int corruptedPackets{0};
     auto disconnectedFrom = std::chrono::steady_clock::now();
 
     // set socket recv timeout
@@ -71,24 +72,22 @@ void Connection::run()
 
         // process the received data
         for (int i = 0; i < bytesRead; ++i) {
+            data += buffer[i];
 
             // search for the termination symbol
             if (buffer[i] == Message::TERMINATION_SYMBOL) {
                 // if find, the whole message was received
 
                 try {
-                    std::unique_ptr<Message> message = Message::parse(data);
-                    messageHandler.handleMessage(*this, std::move(message));
-                    corruptedMessages = 0;
+                    Packet packet{data};
+                    handlePacket(packet);
+                    corruptedPackets = 0;
                 }
-                catch (MessageException &exception) {
-                    corruptedMessages++;
+                catch (PacketException &exception) {
+                    corruptedPackets++;
                 }
 
                 data.clear();
-            }
-            else {
-                data += buffer[i];
             }
         }
 
@@ -97,10 +96,10 @@ void Connection::run()
             // buffered data exceeds the normal message length
             // message is probably corrupted
             data.clear();
-            corruptedMessages++;
+            corruptedPackets++;
         }
 
-        if (corruptedMessages > CORRUPTED_MESSAGES_LIMIT) {
+        if (corruptedPackets > CORRUPTED_PACKETS_LIMIT) {
             // connection probably corrupted
             closeSocket();
             break;
@@ -110,13 +109,13 @@ void Connection::run()
     }
 }
 
-void Connection::send(Message &message)
+void Connection::send(Packet &packet)
 {
     if (isDisconnected() || isClosed()) {
         throw ConnectionException("cant send data to the connection");
     }
 
-    std::string contents = message.serialize();
+    std::string contents = packet.serialize();
     ::send(socket, contents.c_str(), contents.length(), 0);
 }
 
@@ -134,5 +133,10 @@ void Connection::closeSocket()
 {
     ::close(socket);
     socket = -1;
+}
+
+void Connection::handlePacket(Packet packet)
+{
+    // TODO: implement packet handling
 }
 

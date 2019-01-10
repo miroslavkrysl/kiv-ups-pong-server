@@ -8,14 +8,10 @@
 #include <thread>
 
 #include "Server.h"
-#include "Logger.h"
-#include "Connection.h"
-#include "MessageHandler.h"
 
 Server::Server(uint16_t port, std::string ipAddress, Logger &logger)
     : shouldTerminate{false},
-    messageHandler(*this),
-    logger(logger)
+      logger(logger)
 {
     memset(&serverAddress, 0, sizeof(serverAddress));
 
@@ -134,8 +130,8 @@ void Server::handleConnection(int socket, sockaddr_in address)
     uint32_t uid = nextConnectionUid_();
 
     auto inserted = connections.emplace(std::piecewise_construct,
-                                         std::forward_as_tuple(uid),
-                                         std::forward_as_tuple(socket, address, uid, messageHandler));
+                                        std::forward_as_tuple(uid),
+                                        std::forward_as_tuple(socket, address, uid, *this));
 
     Connection &connection = inserted.first->second;
 

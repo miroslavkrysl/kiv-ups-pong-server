@@ -2,18 +2,19 @@
 
 #include <netinet/in.h>
 
-#include "Message.h"
 #include "Thread.h"
-#include "MessageHandler.h"
+#include "Packet.h"
+
+class Server;
 
 class Connection: public Thread
 {
     int socket;
     sockaddr_in address;
     uint32_t uid;
-    MessageHandler &messageHandler;
+    Server &server;
 
-    const int CORRUPTED_MESSAGES_LIMIT;
+    const int CORRUPTED_PACKETS_LIMIT;
     const std::chrono::duration<int> RECONNECTION_TIME_LIMIT;
     const timeval RECV_TIMEOUT;
 
@@ -21,13 +22,13 @@ class Connection: public Thread
     bool identified;
 
     void closeSocket();
-
+    void handlePacket(Packet packet);
 public:
-    Connection(int socket, sockaddr_in address, uint32_t uid, MessageHandler &messageHandler);
-    Connection(const Connection &connection) = delete;
+    Connection(int socket, sockaddr_in address, uint32_t uid, Server &server);
 
-    void send(Message &message);
+    Connection(const Connection &connection) = delete;
     void run() override;
+    void send(Packet &packet);
 
     bool isDisconnected();
     bool isClosed();

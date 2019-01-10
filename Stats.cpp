@@ -17,15 +17,15 @@ void Stats::setStarted(const std::chrono::system_clock::time_point &started)
     Stats::started = started;
 }
 
-void Stats::addMessagesReceived(uint64_t count)
+void Stats::addPacketsReceived(uint64_t count)
 {
-    std::unique_lock<std::mutex> lock{messagesReceivedMutex};
+    std::unique_lock<std::mutex> lock{packetsReceivedMutex};
     messagesReceived += count;
 }
 
-void Stats::addMessagesDropped(uint64_t count)
+void Stats::addPacketsDropped(uint64_t count)
 {
-    std::unique_lock<std::mutex> lock{messagesDroppedMutex};
+    std::unique_lock<std::mutex> lock{packetsDroppedMutex};
     messagesDropped += count;
 }
 
@@ -41,9 +41,9 @@ void Stats::addBytesDropped(uint64_t count)
     bytesDropped += count;
 }
 
-void Stats::addMessagesSent(uint64_t count)
+void Stats::addPacketsSent(uint64_t count)
 {
-    std::unique_lock<std::mutex> lock{messagesSentMutex};
+    std::unique_lock<std::mutex> lock{packetsSentMutex};
     messagesSent += count;
 }
 
@@ -68,12 +68,12 @@ std::string Stats::toLogString()
            << std::chrono::duration_cast<std::chrono::seconds>(upTime).count() << " seconds"
            << std::endl;
     stream << "Bytes received: " << bytesReceived + bytesDropped << std::endl;
-    stream << "Messages received: " << messagesReceived + messagesDropped << std::endl;
+    stream << "Packets received: " << messagesReceived + messagesDropped << std::endl;
     stream << std::endl;
     stream << "Bytes sent: " << bytesSent << std::endl;
-    stream << "Messages sent: " << messagesSent << std::endl;
+    stream << "Packets sent: " << messagesSent << std::endl;
     stream << std::endl;
-    stream << "Messages dropped: " << bytesDropped << std::endl;
+    stream << "Packets dropped: " << bytesDropped << std::endl;
     stream << "Bytes dropped: " << messagesDropped << std::endl;
 
     return stream.str();

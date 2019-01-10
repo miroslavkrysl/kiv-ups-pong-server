@@ -23,9 +23,9 @@ void Logger::log(std::string &message)
     baseLogFile << message << std::endl;
 }
 
-void Logger::logCommunication(Message &message)
+void Logger::logCommunication(Packet &packet)
 {
-    communicationLogFile << message.toLogString() << std::endl;
+    communicationLogFile << packet.serialize() << std::endl;
 }
 
 void Logger::writeStats(Stats &stats)

@@ -2,8 +2,8 @@
 
 #include <string>
 #include <fstream>
-#include "Message.h"
 #include "Stats.h"
+#include "Packet.h"
 
 class Logger
 {
@@ -14,7 +14,7 @@ public:
     Logger(std::string baseLogFile, std::string communicationLogFile, std::string statsFile);
     virtual ~Logger();
     void log(std::string &message);
-    void logCommunication(Message &message);
+    void logCommunication(Packet &packet);
     void writeStats(Stats &stats);
 };
 
