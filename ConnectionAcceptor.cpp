@@ -1,11 +1,13 @@
 #include <cstring>
 #include <zconf.h>
+#include <iostream>
 
 #include "ConnectionAcceptor.h"
 #include "Server.h"
 
 ConnectionAcceptor::ConnectionAcceptor(Server &server)
-    : server(server)
+    : server(server),
+      serverSocket(-1)
 {}
 
 void ConnectionAcceptor::run()
@@ -13,7 +15,7 @@ void ConnectionAcceptor::run()
     int returnValue;
 
     // create the socket
-    int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+    serverSocket = ::socket(AF_INET, SOCK_STREAM, 0);
 
     // set the socket option to reuse address
     int parameter = 1;
@@ -28,7 +30,7 @@ void ConnectionAcceptor::run()
     }
 
     // bind address to the socket
-    returnValue = bind(serverSocket, reinterpret_cast<sockaddr *>(&server.address), sizeof(server.address));
+    returnValue = bind(serverSocket, reinterpret_cast<sockaddr *>(&server.getAddress()), sizeof(server.getAddress()));
 
     if (returnValue != 0) {
         throw ServerException("error while binding the server address to the socket: " + std::string{strerror(errno)});
@@ -46,9 +48,15 @@ void ConnectionAcceptor::run()
         sockaddr_in clientAddress{};
         socklen_t addressSize = sizeof(in_addr_t);
 
-        int clientSocket = accept(serverSocket, reinterpret_cast<sockaddr *>(&clientAddress), &addressSize);
+        int clientSocket = ::accept(serverSocket, reinterpret_cast<sockaddr *>(&clientAddress), &addressSize);
 
         if (clientSocket == -1) {
+
+            if (errno == EBADF || errno == EINVAL) {
+                // socket closed
+                break;
+            }
+
             throw ServerException("error while accepting the connection: " + std::string{strerror(errno)});
         }
 
@@ -56,5 +64,11 @@ void ConnectionAcceptor::run()
         server.addConnection(clientSocket, clientAddress);
     }
 
-    close(serverSocket);
+    ::close(serverSocket);
+}
+
+void ConnectionAcceptor::stop(bool wait)
+{
+    ::shutdown(serverSocket, SHUT_RDWR);
+    Thread::stop(wait);
 }
