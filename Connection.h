@@ -21,7 +21,8 @@ private:
     uint32_t uid;
     Server &server;
     Mode mode;
-    std::chrono::steady_clock::time_point lastActive;
+    std::chrono::steady_clock::time_point lastRecvAt;
+    std::chrono::steady_clock::time_point lastSendAt;
 
     std::chrono::seconds inactiveTimeout;
 

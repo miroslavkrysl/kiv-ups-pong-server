@@ -18,10 +18,6 @@ Connection::Connection(int socket, sockaddr_in address, uint32_t uid, Server &se
 
 void Connection::run()
 {
-    if (isClosed()) {
-        throw ConnectionException("can not receive data from the closed connection");
-    }
-
     char buffer[1024];
     std::string data;
     int corruptedPackets{0};
@@ -29,9 +25,9 @@ void Connection::run()
     setMode(Mode::Idle);
 
 
-    while (!shouldStop()) {
+    while (!shouldStop() && !isClosed()) {
 
-        ssize_t bytesRead = recv(socket, buffer, sizeof(buffer), 0);
+        ssize_t bytesRead = ::recv(socket, buffer, sizeof(buffer), 0);
 
         if (bytesRead == -1) {
             // an error occurred
@@ -39,7 +35,7 @@ void Connection::run()
             if (errno == EAGAIN) {
                 // client inactive
                 auto now = std::chrono::steady_clock::now();
-                auto inactive = now - lastActive;
+                auto inactive = now - lastRecvAt;
 
                 if (inactive > inactiveTimeout) {
                     // inactive too long, probably dead
@@ -99,14 +95,33 @@ void Connection::run()
 
 void Connection::send(Packet &packet)
 {
-    if (isClosed()) {
-        throw ConnectionException("can not send data to the closed connection");
-    }
-
     std::string contents = packet.serialize();
-    ::send(socket, contents.c_str(), contents.length(), 0);
 
-    // TODO: handle sending errors
+    while (!isClosed()) {
+        ssize_t sentBytes = ::send(socket, contents.c_str(), contents.length(), 0);
+
+        if (sentBytes >= 0) {
+            break;
+        }
+
+        // an error occurred
+        if (errno == EAGAIN) {
+            // internal sending buffer full
+            auto now = std::chrono::steady_clock::now();
+            auto inactive = now - lastSendAt;
+
+            if (inactive > inactiveTimeout) {
+                // inactive too long, probably dead
+                closeSocket();
+                break;
+            }
+        }
+        else {
+            // unrecoverable error
+            closeSocket();
+            break;
+        }
+    }
 }
 
 bool Connection::isClosed()
@@ -118,11 +133,6 @@ void Connection::closeSocket()
 {
     ::close(socket);
     socket = -1;
-}
-
-void Connection::handlePacket(Packet packet)
-{
-    // TODO: implement packet handling
 }
 
 void Connection::setMode(Connection::Mode mode)
@@ -148,5 +158,10 @@ void Connection::setMode(Connection::Mode mode)
     this->mode = mode;
     setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const void *>(&recvTimeout), sizeof(recvTimeout));
     setsockopt(socket, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const void *>(&sendTimeout), sizeof(sendTimeout));
+}
+
+void Connection::handlePacket(Packet packet)
+{
+    // TODO: implement packet handling
 }
 
