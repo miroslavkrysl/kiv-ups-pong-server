@@ -6,10 +6,9 @@
 #include "Packet.h"
 #include "Server.h"
 
-Connection::Connection(int socket, sockaddr_in address, Uid uid, Server &server)
+Connection::Connection(int socket, sockaddr_in address, Server &server)
     : socket{socket},
       address{address},
-      uid{uid},
       server{server},
       identified{false},
       mode{Mode::Idle}

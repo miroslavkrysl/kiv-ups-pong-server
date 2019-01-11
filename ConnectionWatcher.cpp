@@ -8,22 +8,12 @@ ConnectionWatcher::ConnectionWatcher(Server &server)
 void ConnectionWatcher::run()
 {
     while (!shouldStop()) {
-        std::unique_lock<std::mutex> lock{server.connectionsMutex};
 
-        auto uidConnection = server.connections.begin();
+        server.filterConnections([](Connection &connection)
+                                 {
+                                     return connection.isClosed();
+                                 });
 
-        while (uidConnection != server.connections.end()) {
-            Connection &connection = uidConnection->second;
-
-            if (connection.isClosed()) {
-                uidConnection = server.connections.erase(uidConnection);
-            }
-            else {
-                uidConnection++;
-            }
-        }
-
-        lock.release();
         std::this_thread::sleep_for(CHECK_PERIOD);
     }
 }

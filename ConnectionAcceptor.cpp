@@ -53,7 +53,7 @@ void ConnectionAcceptor::run()
         }
 
         // handle the new connection
-        server.handleConnection(clientSocket, clientAddress);
+        server.addConnection(clientSocket, clientAddress);
     }
 
     close(serverSocket);

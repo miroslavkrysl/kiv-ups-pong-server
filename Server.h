@@ -4,8 +4,8 @@
 
 #include <stdexcept>
 #include <mutex>
-#include <map>
-#include <unordered_map>
+#include <list>
+#include <functional>
 
 #include "ConnectionAcceptor.h"
 #include "ConnectionWatcher.h"
@@ -18,18 +18,15 @@ class Server: public Thread
     friend class ConnectionAcceptor;
     friend class ConnectionWatcher;
 
-    ConnectionAcceptor connectionAcceptor;
-    ConnectionWatcher connectionWatcher;
     Logger &logger;
     Stats stats;
+    ConnectionAcceptor connectionAcceptor;
+    ConnectionWatcher connectionWatcher;
 
     sockaddr_in address;
 
-    std::map<Connection::Uid, Connection> connections;
-    std::unordered_map<std::string, Player> players;
-
+    std::list<Connection> connections;
     std::mutex connectionsMutex;
-    std::mutex playersMutex;
 
     void run() override;
 
@@ -40,6 +37,10 @@ public:
 
     Stats &getStats();
     void stop(bool wait) override;
+
+    void addConnection(int socket, sockaddr_in address);
+    void filterConnections(std::function<bool(Connection&)> filter);
+    void forEachConnection(std::function<void(Connection&)> function);
 };
 
 class ServerException: public std::runtime_error

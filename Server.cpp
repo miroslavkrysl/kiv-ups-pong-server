@@ -40,20 +40,46 @@ void Server::run()
 
     connectionAcceptor.join();
     connectionWatcher.join();
+
+    forEachConnection([](Connection &connection)
+                      {
+                          connection.stop(true);
+                      });
 }
 
-void Server::handleConnection(int socket, sockaddr_in address)
+void Server::addConnection(int socket, sockaddr_in address)
 {
     std::unique_lock<std::mutex> lock{connectionsMutex};
 
-    Connection::Uid uid = std::chrono::system_clock::now();
+    connections.emplace_back(socket, address, *this);
 
-    auto inserted = connections.emplace(std::piecewise_construct,
-                                        std::forward_as_tuple(uid),
-                                        std::forward_as_tuple(socket, address, uid, *this));
-
-    Connection &connection = inserted.first->second;
+    Connection &connection = connections.back();
     connection.start();
+}
+
+void Server::filterConnections(std::function<bool(Connection &)> filter)
+{
+    std::unique_lock<std::mutex> lock{connectionsMutex};
+
+    auto connectionPtr = connections.begin();
+
+    while (connectionPtr != connections.end()) {
+        if (filter(*connectionPtr)) {
+            connectionPtr = connections.erase(connectionPtr);
+        }
+        else {
+            connectionPtr++;
+        }
+    }
+}
+
+void Server::forEachConnection(std::function<void(Connection &)> function)
+{
+    std::unique_lock<std::mutex> lock{connectionsMutex};
+
+    for (auto &connection : connections) {
+        function(connection);
+    }
 }
 
 Stats &Server::getStats()

@@ -21,7 +21,6 @@ public:
 private:
     int socket;
     sockaddr_in address;
-    Uid uid;
     Server &server;
     Mode mode;
 
@@ -45,7 +44,7 @@ private:
     void handlePacket(Packet packet);
 
 public:
-    Connection(int socket, sockaddr_in address, Uid uid, Server &server);
+    Connection(int socket, sockaddr_in address, Server &server);
     Connection(const Connection &connection) = delete;
 
     void run() override;
