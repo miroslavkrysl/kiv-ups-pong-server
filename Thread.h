@@ -1,15 +1,13 @@
 #pragma once
 
-#include <memory>
 #include <thread>
-#include <mutex>
 
 class Thread
 {
-    std::unique_ptr<std::thread> thread;
+    std::thread thread;
     bool terminate;
-public:
 
+public:
     Thread();
     virtual ~Thread();
 
@@ -18,6 +16,7 @@ public:
     virtual void start();
     virtual void stop();
     virtual void join() final;
+    virtual void detach() final;
     virtual bool shouldStop() final;
     virtual bool isRunning() final;
 };

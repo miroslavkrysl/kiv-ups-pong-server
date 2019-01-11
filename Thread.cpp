@@ -11,33 +11,40 @@ Thread::~Thread()
 
 void Thread::start()
 {
-    if (thread) {
+    if (thread.joinable()) {
         return;
     }
 
     terminate = false;
-    thread = std::make_unique<std::thread>(&Thread::run, this);
+    thread = std::thread(&Thread::run, this);
 }
 
 void Thread::stop()
 {
-    if (thread == nullptr) {
+    if (!thread.joinable()) {
         return;
     }
 
     terminate = true;
-    thread->join();
-
-    thread.reset();
+    thread.join();
 }
 
 void Thread::join()
 {
-    if (thread == nullptr || !thread->joinable()) {
+    if (!thread.joinable()) {
         return;
     }
 
-    thread->join();
+    thread.join();
+}
+
+void Thread::detach()
+{
+    if (!thread.joinable()) {
+        return;
+    }
+
+    thread.join();
 }
 
 bool Thread::shouldStop()
@@ -47,5 +54,5 @@ bool Thread::shouldStop()
 
 bool Thread::isRunning()
 {
-    return thread != nullptr;
+    return thread.joinable();
 }
