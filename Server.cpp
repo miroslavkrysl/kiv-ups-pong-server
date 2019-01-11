@@ -61,9 +61,9 @@ Stats &Server::getStats()
     return stats;
 }
 
-void Server::stop()
+void Server::stop(bool wait)
 {
-    connectionAcceptor.stop();
-    connectionWatcher.stop();
-    Thread::stop();
+    connectionAcceptor.stop(true);
+    connectionWatcher.stop(true);
+    Thread::stop(wait);
 }

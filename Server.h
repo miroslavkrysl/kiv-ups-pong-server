@@ -39,7 +39,7 @@ public:
     explicit Server(uint16_t port, std::string ipAddress, Logger &logger_);
 
     Stats &getStats();
-    void stop() override;
+    void stop(bool wait) override;
 };
 
 class ServerException: public std::runtime_error
