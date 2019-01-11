@@ -1,16 +1,20 @@
 #include "Packet.h"
 
+std::map<Packet::PacketType, std::string> Packet::typeStrings{};
+
 std::map<Packet::PacketType, std::string> Packet::getTypeToStringMap()
 {
     if (typeStrings.empty()) {
         typeStrings = std::map<PacketType, std::string>{
             {PacketType::Empty, "empty"},
+            {PacketType::Empty, "poke"},
+            {PacketType::Empty, "poke_back"},
             {PacketType::LoginOk, "login_ok"},
             {PacketType::LoginFailed, "login_failed"},
             {PacketType::GameJoined, "game_joined"},
             {PacketType::GameNotJoined, "game_not_joined"},
             {PacketType::GamePaused, "game_paused"},
-            {PacketType::OpponentLeaved, "opponent_leaved"},
+            {PacketType::OpponentLeft, "opponent_left"},
             {PacketType::OpponentState, "opponent_state"},
             {PacketType::BallState, "ball_state"},
             {PacketType::NewRound, "new_round"},

@@ -12,61 +12,48 @@ Connection::Connection(int socket, sockaddr_in address, uint32_t uid, Server &se
       uid{uid},
       disconnected{false},
       identified{false},
-      CORRUPTED_PACKETS_LIMIT{5},
-      RECONNECTION_TIME_LIMIT{30},
-      RECV_TIMEOUT{10, 0},
-      server{server}
-{
-}
+      server{server},
+      mode{Mode::Idle}
+{}
 
 void Connection::run()
 {
+    if (isClosed()) {
+        throw ConnectionException("can not receive data from the closed connection");
+    }
+
     char buffer[1024];
     std::string data;
     int corruptedPackets{0};
-    auto disconnectedFrom = std::chrono::steady_clock::now();
 
-    // set socket recv timeout
-    setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const void *>(&RECV_TIMEOUT), sizeof(RECV_TIMEOUT));
+    setMode(Mode::Idle);
+
 
     while (!shouldStop()) {
 
         ssize_t bytesRead = recv(socket, buffer, sizeof(buffer), 0);
 
         if (bytesRead == -1) {
-            // an error occured
+            // an error occurred
 
-            if (errno == EAGAIN
-                || errno == ECONNABORTED
-                || errno == ECONNRESET) {
-                // network errors, try to reconnect
-
-                if (!disconnected) {
-                    disconnected = true;
-                    disconnectedFrom = std::chrono::steady_clock::now();
-                }
-
+            if (errno == EAGAIN) {
+                // client inactive
                 auto now = std::chrono::steady_clock::now();
-                auto disconnectedTime = now - disconnectedFrom;
+                auto inactive = now - lastActive;
 
-                if (disconnectedTime > RECONNECTION_TIME_LIMIT) {
-                    // disconnected too long
-                    closeSocket();
+                if (inactive > inactiveTimeout) {
+                    // inactive too long, probably dead
                     break;
                 }
-
-                std::this_thread::sleep_for(std::chrono::seconds{1});
             }
             else {
                 // unrecoverable error
-                closeSocket();
                 break;
             }
         }
 
         if (bytesRead == 0) {
             // player orderly disconnected
-            closeSocket();
             break;
         }
 
@@ -75,7 +62,7 @@ void Connection::run()
             data += buffer[i];
 
             // search for the termination symbol
-            if (buffer[i] == Message::TERMINATION_SYMBOL) {
+            if (buffer[i] == Packet::TERMINATOR) {
                 // if find, the whole message was received
 
                 try {
@@ -92,7 +79,7 @@ void Connection::run()
         }
 
 
-        if (data.size() > Message::MAX_SIZE) {
+        if (data.size() > Packet::MAX_SIZE) {
             // buffered data exceeds the normal message length
             // message is probably corrupted
             data.clear();
@@ -101,27 +88,25 @@ void Connection::run()
 
         if (corruptedPackets > CORRUPTED_PACKETS_LIMIT) {
             // connection probably corrupted
-            closeSocket();
             break;
         }
 
         disconnected = false;
     }
+
+    closeSocket();
 }
 
 void Connection::send(Packet &packet)
 {
-    if (isDisconnected() || isClosed()) {
-        throw ConnectionException("cant send data to the connection");
+    if (isClosed()) {
+        throw ConnectionException("can not send data to the closed connection");
     }
 
     std::string contents = packet.serialize();
     ::send(socket, contents.c_str(), contents.length(), 0);
-}
 
-bool Connection::isDisconnected()
-{
-    return disconnected;
+    // TODO: handle sending errors
 }
 
 bool Connection::isClosed()
@@ -138,5 +123,30 @@ void Connection::closeSocket()
 void Connection::handlePacket(Packet packet)
 {
     // TODO: implement packet handling
+}
+
+void Connection::setMode(Connection::Mode mode)
+{
+    timeval recvTimeout{};
+    timeval sendTimeout{};
+
+    switch (mode) {
+    case Mode::Idle:
+        recvTimeout = RECV_TIMEOUT_IDLE;
+        sendTimeout = SEND_TIMEOUT_IDLE;
+        inactiveTimeout = INACTIVE_TIMEOUT_IDLE;
+        break;
+    case Mode::Busy:
+        recvTimeout = RECV_TIMEOUT_BUSY;
+        sendTimeout = SEND_TIMEOUT_BUSY;
+        inactiveTimeout = INACTIVE_TIMEOUT_BUSY;
+        break;
+    default:
+        throw ConnectionException("can not set mode " + std::to_string(static_cast<int>(mode)));
+    }
+
+    this->mode = mode;
+    setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const void *>(&recvTimeout), sizeof(recvTimeout));
+    setsockopt(socket, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const void *>(&sendTimeout), sizeof(sendTimeout));
 }
 

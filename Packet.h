@@ -11,13 +11,15 @@ public:
     enum class PacketType
     {
         Empty,
+        Poke,
+        PokeBack,
         // server packets
-            LoginOk,
+        LoginOk,
         LoginFailed,
         GameJoined,
         GameNotJoined,
         GamePaused,
-        OpponentLeaved,
+        OpponentLeft,
         OpponentState,
         BallState,
         NewRound,

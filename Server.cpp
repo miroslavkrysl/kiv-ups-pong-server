@@ -92,6 +92,7 @@ void Server::terminate()
 
 uint32_t Server::nextConnectionUid_()
 {
+    // TODO: better uid handling
     uint32_t uid{0};
     auto max = connections.rbegin();
 
