@@ -6,6 +6,7 @@
 
 #include <cstring>
 #include <thread>
+#include <iostream>
 
 #include "Server.h"
 
@@ -35,8 +36,8 @@ void Server::run()
 {
     stats.setStarted(std::chrono::system_clock::now());
 
-    connectionAcceptor.run();
-    connectionWatcher.run();
+    connectionAcceptor.start();
+    connectionWatcher.start();
 
     connectionAcceptor.join();
     connectionWatcher.join();
@@ -87,9 +88,14 @@ Stats &Server::getStats()
     return stats;
 }
 
+sockaddr_in &Server::getAddress()
+{
+    return address;
+}
+
 void Server::stop(bool wait)
 {
-    connectionAcceptor.stop(true);
-    connectionWatcher.stop(true);
+    connectionAcceptor.stop(false);
+    connectionWatcher.stop(false);
     Thread::stop(wait);
 }

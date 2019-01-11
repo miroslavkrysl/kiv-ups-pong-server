@@ -15,9 +15,6 @@
 
 class Server: public Thread
 {
-    friend class ConnectionAcceptor;
-    friend class ConnectionWatcher;
-
     Logger &logger;
     Stats stats;
     ConnectionAcceptor connectionAcceptor;
@@ -30,12 +27,11 @@ class Server: public Thread
 
     void run() override;
 
-    void handleConnection(int socket, sockaddr_in address);
-
 public:
     explicit Server(uint16_t port, std::string ipAddress, Logger &logger_);
 
     Stats &getStats();
+    sockaddr_in &getAddress();
     void stop(bool wait) override;
 
     void addConnection(int socket, sockaddr_in address);
