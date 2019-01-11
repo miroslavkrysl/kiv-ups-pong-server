@@ -6,7 +6,7 @@ Thread::Thread()
 
 Thread::~Thread()
 {
-    stop();
+    stop(true);
 }
 
 void Thread::start()
@@ -19,14 +19,17 @@ void Thread::start()
     thread = std::thread(&Thread::run, this);
 }
 
-void Thread::stop()
+void Thread::stop(bool wait)
 {
     if (!thread.joinable()) {
         return;
     }
 
     terminate = true;
-    thread.join();
+
+    if (wait) {
+        thread.join();
+    }
 }
 
 void Thread::join()

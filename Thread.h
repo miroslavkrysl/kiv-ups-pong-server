@@ -14,7 +14,7 @@ public:
     virtual void run() = 0;
 
     virtual void start();
-    virtual void stop();
+    virtual void stop(bool wait);
     virtual void join() final;
     virtual void detach() final;
     virtual bool shouldStop() final;
