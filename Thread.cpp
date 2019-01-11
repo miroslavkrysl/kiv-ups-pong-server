@@ -33,7 +33,7 @@ void Thread::stop()
 
 void Thread::join()
 {
-    if (thread == nullptr) {
+    if (thread == nullptr || !thread->joinable()) {
         return;
     }
 
