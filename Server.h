@@ -1,40 +1,44 @@
 #pragma once
 
 #include <netinet/in.h>
+
 #include <stdexcept>
-#include <vector>
 #include <mutex>
 #include <map>
 #include <unordered_map>
 
+#include "ConnectionAcceptor.h"
+#include "ConnectionWatcher.h"
+#include "Logger.h"
 #include "Connection.h"
 #include "Player.h"
-#include "Logger.h"
 
-class Server
+class Server: public Thread
 {
+    friend class ConnectionAcceptor;
+    friend class ConnectionWatcher;
+
+    ConnectionAcceptor connectionAcceptor;
+    ConnectionWatcher connectionWatcher;
     Logger &logger;
     Stats stats;
 
-    sockaddr_in serverAddress;
-    bool shouldTerminate;
+    sockaddr_in address;
 
-    std::map<uint32_t, Connection> connections;
+    std::map<Connection::Uid, Connection> connections;
     std::unordered_map<std::string, Player> players;
 
     std::mutex connectionsMutex;
     std::mutex playersMutex;
 
-    uint32_t nextConnectionUid_();
-    void handleConnection(int socket, sockaddr_in address);
-    void removeConnection(uint32_t uid);
+    void run() override;
+    void stop() override;
 
-    void acceptConnections();
+    void handleConnection(int socket, sockaddr_in address);
 
 public:
     explicit Server(uint16_t port, std::string ipAddress, Logger &logger_);
-    void run();
-    void terminate();
+
     Stats &getStats();
 };
 

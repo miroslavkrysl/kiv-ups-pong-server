@@ -10,21 +10,22 @@
 #include "Server.h"
 
 Server::Server(uint16_t port, std::string ipAddress, Logger &logger)
-    : shouldTerminate{false},
+    : connectionAcceptor{*this},
+      connectionWatcher{*this},
       logger(logger)
 {
-    memset(&serverAddress, 0, sizeof(serverAddress));
+    memset(&address, 0, sizeof(address));
 
-    serverAddress.sin_family = AF_INET;
-    serverAddress.sin_port = htons(port);
+    address.sin_family = AF_INET;
+    address.sin_port = htons(port);
 
     if (ipAddress.empty()) {
-        serverAddress.sin_addr.s_addr = INADDR_ANY;
+        address.sin_addr.s_addr = INADDR_ANY;
     }
     else {
-        serverAddress.sin_addr.s_addr = inet_addr(ipAddress.c_str());
+        address.sin_addr.s_addr = inet_addr(ipAddress.c_str());
 
-        if (serverAddress.sin_addr.s_addr == INADDR_NONE) {
+        if (address.sin_addr.s_addr == INADDR_NONE) {
             throw ServerException("server ip address is in wrong format");
         }
     }
@@ -33,120 +34,36 @@ Server::Server(uint16_t port, std::string ipAddress, Logger &logger)
 void Server::run()
 {
     stats.setStarted(std::chrono::system_clock::now());
-    acceptConnections();
-}
 
-void Server::acceptConnections()
-{
-    int returnValue;
+    connectionAcceptor.run();
+    connectionWatcher.run();
 
-    // create the socket
-    int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-
-    // set the socket option to reuse address
-    int parameter = 1;
-    returnValue = setsockopt(serverSocket,
-                             SOL_SOCKET,
-                             SO_REUSEADDR,
-                             reinterpret_cast<const void *>(&parameter),
-                             sizeof(parameter));
-
-    if (returnValue == -1) {
-        throw ServerException("error while setting the socket options" + std::string{strerror(errno)});
-    }
-
-    // bind address to the socket
-    returnValue = bind(serverSocket, reinterpret_cast<sockaddr *>(&serverAddress), sizeof(serverAddress));
-
-    if (returnValue != 0) {
-        throw ServerException("error while binding the server address to the socket: " + std::string{strerror(errno)});
-    }
-
-    // start listening on the socket
-    returnValue = listen(serverSocket, 5);
-
-    if (returnValue != 0) {
-        throw ServerException("error while starting to listen on the socket: " + std::string{strerror(errno)});
-    }
-
-    // loop for accepting new connections
-    while (!shouldTerminate) {
-        sockaddr_in clientAddress{};
-        socklen_t addressSize = sizeof(in_addr_t);
-
-        int clientSocket = accept(serverSocket, reinterpret_cast<sockaddr *>(&clientAddress), &addressSize);
-
-        if (clientSocket == -1) {
-            throw ServerException("error while accepting the connection: " + std::string{strerror(errno)});
-        }
-
-        // handle the new connection
-        handleConnection(clientSocket, clientAddress);
-    }
-}
-
-void Server::terminate()
-{
-    shouldTerminate = true;
-}
-
-uint32_t Server::nextConnectionUid_()
-{
-    // TODO: better uid handling
-    uint32_t uid{0};
-    auto max = connections.rbegin();
-
-    if (max == connections.rend()) {
-        return uid;
-    }
-
-    uid = max->first;
-
-    if (uid == UINT32_MAX) {
-        uid = 0;
-
-        for (auto &uidConnection : connections) {
-            if (uid != uidConnection.first) {
-                break;
-            }
-
-            if (uid == UINT32_MAX) {
-                throw ServerException("no more connection uids available");
-            }
-
-            uid++;
-        }
-    }
-    else {
-        uid++;
-    }
-
-    return uid;
+    connectionAcceptor.join();
+    connectionWatcher.join();
 }
 
 void Server::handleConnection(int socket, sockaddr_in address)
 {
     std::unique_lock<std::mutex> lock{connectionsMutex};
 
-    uint32_t uid = nextConnectionUid_();
+    Connection::Uid uid = std::chrono::system_clock::now();
 
     auto inserted = connections.emplace(std::piecewise_construct,
                                         std::forward_as_tuple(uid),
                                         std::forward_as_tuple(socket, address, uid, *this));
 
     Connection &connection = inserted.first->second;
-
     connection.start();
-}
-
-void Server::removeConnection(uint32_t uid)
-{
-    std::unique_lock<std::mutex> lock{connectionsMutex};
-
-    connections.erase(connections.find(uid));
 }
 
 Stats &Server::getStats()
 {
     return stats;
+}
+
+void Server::stop()
+{
+    connectionAcceptor.stop();
+    connectionWatcher.stop();
+    Thread::stop();
 }

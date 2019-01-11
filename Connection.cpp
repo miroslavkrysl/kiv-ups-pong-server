@@ -6,13 +6,12 @@
 #include "Packet.h"
 #include "Server.h"
 
-Connection::Connection(int socket, sockaddr_in address, uint32_t uid, Server &server)
+Connection::Connection(int socket, sockaddr_in address, Uid uid, Server &server)
     : socket{socket},
       address{address},
       uid{uid},
-      disconnected{false},
-      identified{false},
       server{server},
+      identified{false},
       mode{Mode::Idle}
 {}
 
@@ -53,6 +52,8 @@ void Connection::run()
             break;
         }
 
+        lastRecvAt = std::chrono::steady_clock::now();
+
         // process the received data
         for (int i = 0; i < bytesRead; ++i) {
             data += buffer[i];
@@ -86,8 +87,6 @@ void Connection::run()
             // connection probably corrupted
             break;
         }
-
-        disconnected = false;
     }
 
     closeSocket();

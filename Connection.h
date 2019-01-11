@@ -10,7 +10,10 @@ class Server;
 class Connection: public Thread
 {
 public:
-    enum class Mode {
+    typedef std::chrono::system_clock::time_point Uid;
+
+    enum class Mode
+    {
         Idle,
         Busy
     };
@@ -18,9 +21,10 @@ public:
 private:
     int socket;
     sockaddr_in address;
-    uint32_t uid;
+    Uid uid;
     Server &server;
     Mode mode;
+
     std::chrono::steady_clock::time_point lastRecvAt;
     std::chrono::steady_clock::time_point lastSendAt;
 
@@ -34,19 +38,18 @@ private:
     const timeval SEND_TIMEOUT_IDLE{5, 0};
     const timeval SEND_TIMEOUT_BUSY{1, 0};
 
-    bool disconnected;
     bool identified;
 
     void setMode(Mode mode);
     void closeSocket();
     void handlePacket(Packet packet);
-public:
-    Connection(int socket, sockaddr_in address, uint32_t uid, Server &server);
 
+public:
+    Connection(int socket, sockaddr_in address, Uid uid, Server &server);
     Connection(const Connection &connection) = delete;
+
     void run() override;
     void send(Packet &packet);
-
     bool isClosed();
 };
 

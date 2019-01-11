@@ -24,7 +24,7 @@ class Stats
 public:
     Stats();
 
-    void setStarted(const std::chrono::system_clock::time_point &started);
+    void setStarted(std::chrono::system_clock::time_point started);
     void addPacketsReceived(uint64_t count);
     void addPacketsDropped(uint64_t count);
     void addBytesReceived(uint64_t count);

@@ -12,7 +12,7 @@ Stats::Stats()
       bytesSent{0}
 {}
 
-void Stats::setStarted(const std::chrono::system_clock::time_point &started)
+void Stats::setStarted(std::chrono::system_clock::time_point started)
 {
     Stats::started = started;
 }
