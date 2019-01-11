@@ -32,7 +32,6 @@ class Server: public Thread
     std::mutex playersMutex;
 
     void run() override;
-    void stop() override;
 
     void handleConnection(int socket, sockaddr_in address);
 
@@ -40,6 +39,7 @@ public:
     explicit Server(uint16_t port, std::string ipAddress, Logger &logger_);
 
     Stats &getStats();
+    void stop() override;
 };
 
 class ServerException: public std::runtime_error
