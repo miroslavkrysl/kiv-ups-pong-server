@@ -40,6 +40,10 @@ void Connection::run()
                     break;
                 }
             }
+            else if (errno == EBADF || errno == EINVAL) {
+                // socket shut down
+                break;
+            }
             else {
                 // unrecoverable error
                 break;
@@ -108,17 +112,21 @@ void Connection::send(Packet &packet)
             auto now = std::chrono::steady_clock::now();
             auto inactive = now - lastSendAt;
 
-            if (inactive > inactiveTimeout) {
-                // inactive too long, probably dead
-                closeSocket();
-                break;
+            if (inactive < inactiveTimeout) {
+                // inactive time limit not exceeded
+                // try send again
+                continue;
             }
+        }
+        else if (errno == EBADF || errno == EINVAL) {
+            // socket shut down
         }
         else {
             // unrecoverable error
-            closeSocket();
-            break;
         }
+
+        closeSocket();
+        break;
     }
 }
 
@@ -156,6 +164,12 @@ void Connection::setMode(Connection::Mode mode)
     this->mode = mode;
     setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const void *>(&recvTimeout), sizeof(recvTimeout));
     setsockopt(socket, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const void *>(&sendTimeout), sizeof(sendTimeout));
+}
+
+void Connection::stop(bool wait)
+{
+    ::shutdown(socket, SHUT_RDWR);
+    Thread::stop(wait);
 }
 
 void Connection::handlePacket(Packet packet)

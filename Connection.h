@@ -47,9 +47,11 @@ public:
     Connection(int socket, sockaddr_in address, Server &server);
     Connection(const Connection &connection) = delete;
 
-    void run() override;
     void send(Packet &packet);
     bool isClosed();
+
+    void run() override;
+    void stop(bool wait) override;
 };
 
 class ConnectionException: public std::runtime_error
