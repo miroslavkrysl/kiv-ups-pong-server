@@ -13,7 +13,7 @@ Shell::Shell(const std::istream &input, const std::ostream &output, Server &serv
 
 void Shell::run()
 {
-    while (!shouldStop() || !input.eof()) {
+    while (!shouldStop() && !input.eof()) {
         std::string command;
         getline(input, command);
 
