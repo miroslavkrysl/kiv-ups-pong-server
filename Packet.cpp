@@ -1,69 +1,57 @@
+#include <list>
+#include <sstream>
+#include <iostream>
+
 #include "Packet.h"
 
-std::map<Packet::PacketType, std::string> Packet::typeStrings{};
-
-std::map<Packet::PacketType, std::string> Packet::getTypeToStringMap()
-{
-    if (typeStrings.empty()) {
-        typeStrings = std::map<PacketType, std::string>{
-            {PacketType::Empty, "empty"},
-            {PacketType::Empty, "poke"},
-            {PacketType::Empty, "poke_back"},
-            {PacketType::LoginOk, "login_ok"},
-            {PacketType::LoginFailed, "login_failed"},
-            {PacketType::GameJoined, "game_joined"},
-            {PacketType::GameNotJoined, "game_not_joined"},
-            {PacketType::GamePaused, "game_paused"},
-            {PacketType::OpponentLeft, "opponent_left"},
-            {PacketType::OpponentState, "opponent_state"},
-            {PacketType::BallState, "ball_state"},
-            {PacketType::NewRound, "new_round"},
-            {PacketType::GameEnded, "game_ended"},
-            {PacketType::Time, "time"},
-        };
-    }
-
-    return typeStrings;
-}
-
-std::string Packet::typeToString(Packet::PacketType type)
-{
-    auto typeToStringMap = getTypeToStringMap();
-    auto found = typeToStringMap.find(type);
-
-    if (found == typeToStringMap.end()) {
-        throw PacketException("no string representation for packet type " + std::to_string(static_cast<int>(type)));
-    }
-
-    return found->second;
-}
-
-Packet::PacketType Packet::stringToType(std::string type)
-{
-    auto typeToStringMap = getTypeToStringMap();
-
-    for (auto &typeString : typeToStringMap) {
-        if (typeString.second == type) {
-            return typeString.first;
-        }
-    }
-
-    throw PacketException("no packet type for string representation " + type);
-}
-
-Packet::Packet(PacketType type)
-    : type{type}
+Packet::Packet(std::string type)
+    : type{std::move(type)}
 {}
 
-Packet::Packet(std::string contents)
-    : type{PacketType::Empty}
+void Packet::parse(std::string contents)
 {
-    // TODO: make packet from serialized string
+    // remove termination character
+    if (contents.back() == TERMINATOR) {
+        contents.pop_back();
+    }
+
+    // tokenize by delimiter
+    std::list<std::string> tokens;
+    std::stringstream ss{contents};
+
+    while (!ss.eof()) {
+        std::string token;
+        std::getline(ss, token, DELIMITER);
+        tokens.push_back(token);
+    }
+
+    // first token is token type name
+    type = tokens.front();
+    tokens.pop_front();
+
+    // erase existing items and fill with parsed
+    items.clear();
+
+    for (auto &token : tokens) {
+        addItem(token);
+    }
 }
 
 void Packet::addItem(std::string &item)
 {
     items.push_back(item);
+}
+
+void Packet::addItem(int32_t &item)
+{
+    std::string string = std::to_string(item);
+    addItem(string);
+}
+
+void Packet::addItem(uint32_t &item)
+{
+    std::string string = std::to_string(item);
+    addItem(string);
 }
 
 std::vector<std::string> &Packet::getItems()
@@ -75,7 +63,7 @@ std::string Packet::serialize()
 {
     std::string serialized;
 
-    serialized += typeToString(type);
+    serialized += type;
 
     for (auto &item : items) {
         serialized += DELIMITER;

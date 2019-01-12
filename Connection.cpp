@@ -82,8 +82,10 @@ void Connection::run()
                 // if find, the whole message was received
 
                 try {
-                    Packet packet{data};
+                    Packet packet;
+                    packet.parse(data);
                     handlePacket(packet);
+
                     corruptedPackets = 0;
 
                     server.getStats().addPacketsReceived(1);
