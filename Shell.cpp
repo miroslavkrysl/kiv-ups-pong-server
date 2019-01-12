@@ -13,13 +13,9 @@ Shell::Shell(const std::istream &input, const std::ostream &output, Server &serv
 
 void Shell::run()
 {
-    while (!shouldStop()) {
+    while (!shouldStop() || !input.eof()) {
         std::string command;
         getline(input, command);
-
-        if (input.eof()) {
-            break;
-        }
 
         try {
             handle(command);
@@ -27,7 +23,6 @@ void Shell::run()
         catch (std::exception &exception) {
             output << "error: " << exception.what() << std::endl;
         }
-
     }
 }
 
