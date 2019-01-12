@@ -64,7 +64,12 @@ void ConnectionAcceptor::run()
         server.addConnection(clientSocket, clientAddress);
     }
 
+    closeSocket();
+}
+
+void ConnectionAcceptor::closeSocket() {
     ::close(serverSocket);
+    serverSocket = -1;
 }
 
 void ConnectionAcceptor::stop(bool wait)

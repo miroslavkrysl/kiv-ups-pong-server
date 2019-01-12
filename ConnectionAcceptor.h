@@ -10,8 +10,10 @@ class ConnectionAcceptor : public Thread
     int serverSocket;
 public:
     explicit ConnectionAcceptor(Server &server);
+
     void run() override;
     void stop(bool wait) override;
+    void closeSocket();
 };
 
 
