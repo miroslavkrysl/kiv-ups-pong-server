@@ -15,10 +15,10 @@ public:
 
     virtual void run() = 0;
 
-    virtual void start();
-    virtual void stop(bool wait);
-    virtual void join() final;
-    virtual void detach() final;
+    virtual bool start();
+    virtual bool stop(bool wait);
+    virtual bool join() final;
+    virtual bool detach() final;
     virtual bool shouldStop() final;
     virtual bool isRunning() final;
 };

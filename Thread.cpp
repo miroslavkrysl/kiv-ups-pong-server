@@ -9,20 +9,22 @@ Thread::~Thread()
     stop(true);
 }
 
-void Thread::start()
+bool Thread::start()
 {
     if (thread.joinable()) {
-        return;
+        return false;
     }
 
     terminate = false;
     thread = std::thread(&Thread::run, this);
+
+    return true;
 }
 
-void Thread::stop(bool wait)
+bool Thread::stop(bool wait)
 {
     if (!thread.joinable()) {
-        return;
+        return false;
     }
 
     terminate = true;
@@ -30,28 +32,32 @@ void Thread::stop(bool wait)
     if (wait) {
         join();
     }
+
+    return true;
 }
 
-void Thread::join()
+bool Thread::join()
 {
     std::unique_lock<std::mutex> lock{joinMutex};
 
     if (!thread.joinable()) {
-        return;
+        return false;
     }
 
     thread.join();
+    return true;
 }
 
-void Thread::detach()
+bool Thread::detach()
 {
     std::unique_lock<std::mutex> lock{joinMutex};
 
     if (!thread.joinable()) {
-        return;
+        return false;
     }
 
-    thread.join();
+    thread.detach();
+    return true;
 }
 
 bool Thread::shouldStop()
