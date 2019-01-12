@@ -1,6 +1,8 @@
 #include <unistd.h>
 
 #include <thread>
+#include <arpa/inet.h>
+#include <cstring>
 
 #include "Connection.h"
 #include "Packet.h"
@@ -12,7 +14,12 @@ Connection::Connection(int socket, sockaddr_in address, Server &server)
       server{server},
       identified{false},
       mode{Mode::Idle}
-{}
+{
+    char ipString[INET_ADDRSTRLEN];
+    ::inet_ntop(AF_INET, &(address.sin_addr), ipString, INET_ADDRSTRLEN);
+
+    this->ipString = ipString;
+}
 
 void Connection::run()
 {
@@ -37,25 +44,34 @@ void Connection::run()
 
                 if (inactive > inactiveTimeout) {
                     // inactive too long, probably dead
-                    break;
+                    server.getLogger()
+                        .log("connection: " + getId() + " inactive for too long - disconnecting",
+                             Logger::Level::Warning);
+                    return;
                 }
             }
             else if (errno == EBADF || errno == EINVAL) {
                 // socket shut down
-                break;
+                return;
             }
             else {
                 // unrecoverable error
-                break;
+                server.getLogger()
+                    .log("ERROR: error while receiving from the connection: " + getId() + ": "
+                             + std::string{strerror(errno)}, Logger::Level::Error);
+                return;
             }
         }
 
         if (bytesRead == 0) {
             // player orderly disconnected
-            break;
+            server.getLogger()
+                .log("player orderly disconnected: " + getId());
+            return;
         }
 
         lastRecvAt = std::chrono::steady_clock::now();
+        server.getStats().addBytesReceived(bytesRead);
 
         // process the received data
         for (int i = 0; i < bytesRead; ++i) {
@@ -69,8 +85,14 @@ void Connection::run()
                     Packet packet{data};
                     handlePacket(packet);
                     corruptedPackets = 0;
+
+                    server.getStats().addPacketsReceived(1);
+
+                    server.getLogger()
+                        .logCommunication(packet, true, getId());
                 }
                 catch (PacketException &exception) {
+                    server.getStats().addPacketsDropped(1);
                     corruptedPackets++;
                 }
 
@@ -82,17 +104,18 @@ void Connection::run()
         if (data.size() > Packet::MAX_SIZE) {
             // buffered data exceeds the normal message length
             // message is probably corrupted
+            server.getStats().addBytesDropped(data.size());
             data.clear();
             corruptedPackets++;
         }
 
         if (corruptedPackets > CORRUPTED_PACKETS_LIMIT) {
             // connection probably corrupted
+            server.getLogger()
+                .log("ERROR: too much corrupted data receive from the connection: " + getId() + " - disconnecting", Logger::Level::Error);
             break;
         }
     }
-
-    closeSocket();
 }
 
 void Connection::send(Packet &packet)
@@ -103,6 +126,8 @@ void Connection::send(Packet &packet)
         ssize_t sentBytes = ::send(socket, contents.c_str(), contents.length(), 0);
 
         if (sentBytes >= 0) {
+            server.getStats().addPacketsSent(1);
+            server.getStats().addBytesSent(sentBytes);
             break;
         }
 
@@ -123,9 +148,9 @@ void Connection::send(Packet &packet)
         }
         else {
             // unrecoverable error
+            stop(false);
         }
 
-        closeSocket();
         break;
     }
 }
@@ -135,10 +160,9 @@ bool Connection::isClosed()
     return socket == -1;
 }
 
-void Connection::closeSocket()
+std::string Connection::getId()
 {
-    ::close(socket);
-    socket = -1;
+    return ipString;
 }
 
 void Connection::setMode(Connection::Mode mode)
@@ -166,10 +190,22 @@ void Connection::setMode(Connection::Mode mode)
     setsockopt(socket, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const void *>(&sendTimeout), sizeof(sendTimeout));
 }
 
-void Connection::stop(bool wait)
+bool Connection::stop(bool wait)
 {
     ::shutdown(socket, SHUT_RDWR);
-    Thread::stop(wait);
+    return Thread::stop(wait);
+}
+
+void Connection::before()
+{
+    server.getLogger().log("connection listening: " + ipString, Logger::Level::Success);
+}
+
+void Connection::after()
+{
+    ::close(socket);
+    socket = -1;
+    server.getLogger().log("connection closed: " + ipString, Logger::Level::Warning);
 }
 
 void Connection::handlePacket(Packet packet)

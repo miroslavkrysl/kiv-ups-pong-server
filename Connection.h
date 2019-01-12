@@ -20,9 +20,10 @@ public:
 
 private:
     int socket;
-    sockaddr_in address;
+    const sockaddr_in address;
     Server &server;
     Mode mode;
+    std::string ipString;
 
     std::chrono::steady_clock::time_point lastRecvAt;
     std::chrono::steady_clock::time_point lastSendAt;
@@ -40,7 +41,6 @@ private:
     bool identified;
 
     void setMode(Mode mode);
-    void closeSocket();
     void handlePacket(Packet packet);
 
 public:
@@ -49,9 +49,12 @@ public:
 
     void send(Packet &packet);
     bool isClosed();
+    std::string getId();
 
     void run() override;
-    void stop(bool wait) override;
+    bool stop(bool wait) override;
+    void before() override;
+    void after() override;
 };
 
 class ConnectionException: public std::runtime_error

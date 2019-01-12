@@ -40,7 +40,7 @@ void Server::run()
     connectionWatcher.start();
 
     connectionAcceptor.join();
-    connectionWatcher.join();
+    connectionWatcher.stop(true);
 
     forEachConnection([](Connection &connection)
                       {
@@ -48,7 +48,7 @@ void Server::run()
                       });
 }
 
-void Server::addConnection(int socket, sockaddr_in address)
+Connection &Server::addConnection(int socket, sockaddr_in address)
 {
     std::unique_lock<std::mutex> lock{connectionsMutex};
 
@@ -56,31 +56,41 @@ void Server::addConnection(int socket, sockaddr_in address)
 
     Connection &connection = connections.back();
     connection.start();
+
+    return connections.back();
 }
 
-void Server::filterConnections(std::function<bool(Connection &)> filter)
+size_t Server::filterConnections(std::function<bool(Connection &)> filter)
 {
     std::unique_lock<std::mutex> lock{connectionsMutex};
 
+    size_t count{0};
     auto connectionPtr = connections.begin();
 
     while (connectionPtr != connections.end()) {
         if (filter(*connectionPtr)) {
             connectionPtr = connections.erase(connectionPtr);
+            count++;
         }
         else {
             connectionPtr++;
         }
     }
+
+    return count;
 }
 
-void Server::forEachConnection(std::function<void(Connection &)> function)
+size_t Server::forEachConnection(std::function<void(Connection &)> function)
 {
     std::unique_lock<std::mutex> lock{connectionsMutex};
+    size_t count{0};
 
     for (auto &connection : connections) {
         function(connection);
+        count++;
     }
+
+    return count;
 }
 
 Stats &Server::getStats()
@@ -98,9 +108,19 @@ sockaddr_in &Server::getAddress()
     return address;
 }
 
-void Server::stop(bool wait)
+bool Server::stop(bool wait)
 {
     connectionAcceptor.stop(false);
     connectionWatcher.stop(false);
-    Thread::stop(wait);
+    return Thread::stop(wait);
+}
+
+void Server::before()
+{
+    logger.log("starting server");
+}
+
+void Server::after()
+{
+    logger.log("server stopped", Logger::Level::Warning);
 }

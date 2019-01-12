@@ -8,12 +8,14 @@ class ConnectionAcceptor : public Thread
 {
     Server &server;
     int serverSocket;
+
 public:
     explicit ConnectionAcceptor(Server &server);
 
     void run() override;
-    void stop(bool wait) override;
-    void closeSocket();
+    bool stop(bool wait) override;
+    void before() override;
+    void after() override;
 };
 
 

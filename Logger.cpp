@@ -21,30 +21,37 @@ Logger::Logger(std::string baseLogFile, std::string communicationLogFile, std::s
     }
 }
 
-void Logger::log(std::string &message, Level level)
+void Logger::log(const std::string &message, Level level)
 {
     Decor color;
     Decor reset;
 
-    switch (level){
-    case Level::Success: color = Decor{Decor::FG_WHITE}; break;
-    case Level::Warning: color = Decor{Decor::FG_YELLOW}; break;
-    case Level::Error: color = Decor{Decor::FG_RED}; break;
+    switch (level) {
+    case Level::Default: color = Decor{Decor::FG_DEFAULT};
+        break;
+    case Level::Success: color = Decor{Decor::FG_GREEN};
+        break;
+    case Level::Warning: color = Decor{Decor::FG_YELLOW};
+        break;
+    case Level::Error: color = Decor{Decor::FG_RED};
+        break;
     }
 
     std::cout << color << message << reset << std::endl;
     baseLogFile << message << std::endl;
 }
 
-void Logger::logCommunication(Packet &packet, bool incoming)
+void Logger::logCommunication(Packet &packet, bool incoming, std::string id)
 {
     std::string serialized;
 
     if (incoming) {
-        std::cout << Decor{Decor::FG_GREEN} << "<- " << serialized << Decor{Decor::FG_DEFAULT} << std::endl;
+        std::cout << Decor{Decor::FG_GREEN} << "<- " << id << ": " << serialized << Decor{Decor::FG_DEFAULT}
+                  << std::endl;
     }
     else {
-        std::cout << Decor{Decor::FG_BLUE} << "-> " << serialized << Decor{Decor::FG_DEFAULT} << std::endl;
+        std::cout << Decor{Decor::FG_MAGENTA} << "-> " << id << ": " << serialized << Decor{Decor::FG_DEFAULT}
+                  << std::endl;
     }
 
     communicationLogFile << serialized << std::endl;

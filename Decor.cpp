@@ -1,5 +1,6 @@
-#include "Decor.h"
 #include <iostream>
+
+#include "Decor.h"
 
 Decor::Decor()
     :code(RESET_ALL)
@@ -11,6 +12,6 @@ Decor::Decor(int8_t code)
 
 std::ostream &operator<<(std::ostream &out, const Decor &text)
 {
-    out << "\033[" << text.code << "m";
+    out << "\33[" + std::to_string(static_cast<int>(text.code)) + "m";
     return out;
 }

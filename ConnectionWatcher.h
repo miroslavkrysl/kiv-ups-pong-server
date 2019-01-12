@@ -11,7 +11,11 @@ class ConnectionWatcher: public Thread
 
 public:
     explicit ConnectionWatcher(Server &server);
+
     void run() override;
+    bool stop(bool wait) override;
+    void before() override;
+    void after() override;
 };
 
 

@@ -2,6 +2,7 @@
 #include <sstream>
 #include <vector>
 #include <iterator>
+
 #include "Shell.h"
 
 Shell::Shell(const std::istream &input, const std::ostream &output, Server &server)
@@ -54,7 +55,7 @@ void Shell::handle(std::string line)
 
 void Shell::cmdExit(std::vector<std::string> arguments)
 {
-    server.stop(false);
+    server.stop(true);
     stop(false);
 }
 
@@ -62,26 +63,33 @@ void Shell::cmdGames(std::vector<std::string> arguments)
 {
     auto &output = this->output;
 
-    server.forEachConnection([&output](Connection &connection){
+    size_t count = server.forEachConnection([&output](Connection &connection){
         // TODO: print games
         output << "game" << std::endl;
     });
+
+    if (count == 0) {
+        output << "-no games active-" << std::endl;
+    }
 }
 
 void Shell::cmdPlayers(std::vector<std::string> arguments)
 {
     auto &output = this->output;
 
-    server.forEachConnection([&output](Connection &connection){
+    size_t count = server.forEachConnection([&output](Connection &connection){
         // TODO: print players
         output << "player" << std::endl;
     });
+
+    if (count == 0) {
+        output << "-no players active-" << std::endl;
+    }
 }
 
 void Shell::cmdInfo(std::vector<std::string> arguments)
 {
-    // TODO: print info
-    output << "info" << std::endl;
+    output << server.getStats().toLogString();
 }
 
 void Shell::cmdHelp(std::vector<std::string> arguments)

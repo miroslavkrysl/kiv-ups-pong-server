@@ -9,6 +9,7 @@ class Logger
 {
 public:
     enum class Level{
+        Default,
         Success,
         Warning,
         Error
@@ -23,8 +24,8 @@ public:
     Logger(std::string baseLogFile, std::string communicationLogFile, std::string statsFile);
     virtual ~Logger();
 
-    void log(std::string &message, Level level);
-    void logCommunication(Packet &packet, bool incoming);
+    void log(const std::string &message, Level level = Level::Default);
+    void logCommunication(Packet &packet, bool incoming, std::string id = "");
     void writeStats(Stats &stats);
 };
 

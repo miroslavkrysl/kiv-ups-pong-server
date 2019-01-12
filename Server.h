@@ -25,19 +25,22 @@ class Server: public Thread
     std::list<Connection> connections;
     std::mutex connectionsMutex;
 
-    void run() override;
-
 public:
+
     explicit Server(uint16_t port, std::string ipAddress, Logger &logger_);
 
     Stats &getStats();
     Logger &getLogger();
     sockaddr_in &getAddress();
-    void stop(bool wait) override;
 
-    void addConnection(int socket, sockaddr_in address);
-    void filterConnections(std::function<bool(Connection&)> filter);
-    void forEachConnection(std::function<void(Connection&)> function);
+    Connection &addConnection(int socket, sockaddr_in address);
+    size_t filterConnections(std::function<bool(Connection&)> filter);
+    size_t forEachConnection(std::function<void(Connection&)> function);
+
+    void run() override;
+    bool stop(bool wait) override;
+    void before() override;
+    void after() override;
 };
 
 class ServerException: public std::runtime_error
