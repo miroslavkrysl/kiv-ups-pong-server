@@ -4,8 +4,9 @@
 #include <vector>
 #include <map>
 #include <stdexcept>
+#include "Serializable.h"
 
-class Packet
+class Packet: public Serializable
 {
 public:
     static const char DELIMITER{';'};
@@ -17,14 +18,14 @@ private:
     std::vector<std::string> items;
 
 public:
-    explicit Packet(std::string type = "empty");
+    explicit Packet(std::string type = "");
 
-    void parse(std::string contents);
-    std::string serialize();
+    void parse(std::string contents) override;
+    std::string serialize() override;
+    void clear() override;
 
     void addItem(std::string &item);
-    void addItem(int32_t &item);
-    void addItem(uint32_t &item);
+    void addItem(Serializable &item);
 
     std::vector<std::string> &getItems();
 };

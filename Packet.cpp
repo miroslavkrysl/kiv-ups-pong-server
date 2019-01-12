@@ -30,33 +30,11 @@ void Packet::parse(std::string contents)
     tokens.pop_front();
 
     // erase existing items and fill with parsed
-    items.clear();
+    clear();
 
     for (auto &token : tokens) {
         addItem(token);
     }
-}
-
-void Packet::addItem(std::string &item)
-{
-    items.push_back(item);
-}
-
-void Packet::addItem(int32_t &item)
-{
-    std::string string = std::to_string(item);
-    addItem(string);
-}
-
-void Packet::addItem(uint32_t &item)
-{
-    std::string string = std::to_string(item);
-    addItem(string);
-}
-
-std::vector<std::string> &Packet::getItems()
-{
-    return items;
 }
 
 std::string Packet::serialize()
@@ -77,4 +55,26 @@ std::string Packet::serialize()
     }
 
     return serialized;
+}
+
+void Packet::clear()
+{
+    type.clear();
+    items.clear();
+}
+
+void Packet::addItem(std::string &item)
+{
+    items.push_back(item);
+}
+
+void Packet::addItem(Serializable &item)
+{
+    std::string string = item.serialize();
+    addItem(string);
+}
+
+std::vector<std::string> &Packet::getItems()
+{
+    return items;
 }
