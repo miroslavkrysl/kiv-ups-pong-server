@@ -30,11 +30,6 @@ void Shell::run()
     }
 }
 
-void Shell::print(std::string &message)
-{
-    output << message;
-}
-
 void Shell::handle(std::string line)
 {
     std::stringstream lineStream{line};

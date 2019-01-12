@@ -1,4 +1,7 @@
+#include <iostream>
+#include <sstream>
 #include "Logger.h"
+#include "Decor.h"
 
 Logger::Logger(std::string baseLogFile, std::string communicationLogFile, std::string statsFile)
 {
@@ -18,14 +21,33 @@ Logger::Logger(std::string baseLogFile, std::string communicationLogFile, std::s
     }
 }
 
-void Logger::log(std::string &message)
+void Logger::log(std::string &message, Level level)
 {
+    Decor color;
+    Decor reset;
+
+    switch (level){
+    case Level::Success: color = Decor{Decor::FG_WHITE}; break;
+    case Level::Warning: color = Decor{Decor::FG_YELLOW}; break;
+    case Level::Error: color = Decor{Decor::FG_RED}; break;
+    }
+
+    std::cout << color << message << reset << std::endl;
     baseLogFile << message << std::endl;
 }
 
-void Logger::logCommunication(Packet &packet)
+void Logger::logCommunication(Packet &packet, bool incoming)
 {
-    communicationLogFile << packet.serialize() << std::endl;
+    std::string serialized;
+
+    if (incoming) {
+        std::cout << Decor{Decor::FG_GREEN} << "<- " << serialized << Decor{Decor::FG_DEFAULT} << std::endl;
+    }
+    else {
+        std::cout << Decor{Decor::FG_BLUE} << "-> " << serialized << Decor{Decor::FG_DEFAULT} << std::endl;
+    }
+
+    communicationLogFile << serialized << std::endl;
 }
 
 void Logger::writeStats(Stats &stats)

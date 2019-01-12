@@ -88,6 +88,11 @@ Stats &Server::getStats()
     return stats;
 }
 
+Logger &Server::getLogger()
+{
+    return logger;
+}
+
 sockaddr_in &Server::getAddress()
 {
     return address;

@@ -31,6 +31,7 @@ public:
     explicit Server(uint16_t port, std::string ipAddress, Logger &logger_);
 
     Stats &getStats();
+    Logger &getLogger();
     sockaddr_in &getAddress();
     void stop(bool wait) override;
 

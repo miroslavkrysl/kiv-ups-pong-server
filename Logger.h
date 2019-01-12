@@ -7,14 +7,24 @@
 
 class Logger
 {
+public:
+    enum class Level{
+        Success,
+        Warning,
+        Error
+    };
+
+private:
     std::fstream baseLogFile;
     std::fstream communicationLogFile;
     std::fstream statsFile;
+
 public:
     Logger(std::string baseLogFile, std::string communicationLogFile, std::string statsFile);
     virtual ~Logger();
-    void log(std::string &message);
-    void logCommunication(Packet &packet);
+
+    void log(std::string &message, Level level);
+    void logCommunication(Packet &packet, bool incoming);
     void writeStats(Stats &stats);
 };
 
