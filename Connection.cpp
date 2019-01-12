@@ -49,6 +49,10 @@ void Connection::run()
                              Logger::Level::Warning);
                     return;
                 }
+
+                // send poke packet
+                Packet pokePacket("poke");
+                send(pokePacket);
             }
             else if (errno == EBADF || errno == EINVAL) {
                 // socket shut down
