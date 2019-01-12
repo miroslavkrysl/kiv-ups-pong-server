@@ -1,3 +1,5 @@
+#include <utility>
+
 #include <list>
 #include <sstream>
 #include <iostream>
@@ -6,6 +8,11 @@
 
 Packet::Packet(std::string type)
     : type{std::move(type)}
+{}
+
+Packet::Packet(std::string type, std::list<std::string> items)
+    : type{std::move(type)},
+      items{std::move(items)}
 {}
 
 void Packet::parse(std::string contents)
@@ -68,13 +75,7 @@ void Packet::addItem(std::string &item)
     items.push_back(item);
 }
 
-void Packet::addItem(Serializable &item)
-{
-    std::string string = item.serialize();
-    addItem(string);
-}
-
-std::vector<std::string> &Packet::getItems()
+std::list<std::string> &Packet::getItems()
 {
     return items;
 }

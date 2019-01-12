@@ -7,7 +7,7 @@
 #include <functional>
 #include <unordered_map>
 #include "Thread.h"
-#include "Server.h"
+#include "../Network/Server.h"
 
 class Shell: public Thread
 {

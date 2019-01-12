@@ -3,7 +3,7 @@
 #include <string>
 #include <fstream>
 #include "Stats.h"
-#include "Packet.h"
+#include "../Network/Packet.h"
 
 class Logger
 {

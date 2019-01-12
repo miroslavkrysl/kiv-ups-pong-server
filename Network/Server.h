@@ -9,9 +9,9 @@
 
 #include "ConnectionAcceptor.h"
 #include "ConnectionWatcher.h"
-#include "Logger.h"
 #include "Connection.h"
-#include "Player.h"
+#include "../Utils/Logger.h"
+#include "../Game/PlayerState.h"
 
 class Server: public Thread
 {

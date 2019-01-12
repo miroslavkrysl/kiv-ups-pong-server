@@ -2,8 +2,8 @@
 
 #include <netinet/in.h>
 
-#include "Thread.h"
 #include "Packet.h"
+#include "../Utils/Thread.h"
 
 class Server;
 

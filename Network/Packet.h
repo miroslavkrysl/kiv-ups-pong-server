@@ -2,9 +2,9 @@
 
 #include <string>
 #include <vector>
-#include <map>
+#include <list>
 #include <stdexcept>
-#include "Serializable.h"
+#include "../Utils/Serializable.h"
 
 class Packet: public Serializable
 {
@@ -15,19 +15,19 @@ public:
 
 private:
     std::string type;
-    std::vector<std::string> items;
+    std::list<std::string> items;
 
 public:
     explicit Packet(std::string type = "");
+    explicit Packet(std::string type = "", std::list<std::string> items);
 
     void parse(std::string contents) override;
     std::string serialize() override;
     void clear() override;
 
     void addItem(std::string &item);
-    void addItem(Serializable &item);
 
-    std::vector<std::string> &getItems();
+    std::list<std::string> &getItems();
 };
 
 class PacketException: public std::runtime_error

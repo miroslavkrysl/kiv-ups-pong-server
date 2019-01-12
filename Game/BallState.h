@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-class Ball
+class BallState
 {
 public:
     static const int32_t RADIUS{25};
