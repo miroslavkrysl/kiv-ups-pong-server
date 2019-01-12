@@ -1,10 +1,12 @@
 #pragma once
 
 #include <thread>
+#include <mutex>
 
 class Thread
 {
     std::thread thread;
+    std::mutex joinMutex;
     bool terminate;
 
 public:

@@ -28,12 +28,14 @@ void Thread::stop(bool wait)
     terminate = true;
 
     if (wait) {
-        thread.join();
+        join();
     }
 }
 
 void Thread::join()
 {
+    std::unique_lock<std::mutex> lock{joinMutex};
+
     if (!thread.joinable()) {
         return;
     }
@@ -43,6 +45,8 @@ void Thread::join()
 
 void Thread::detach()
 {
+    std::unique_lock<std::mutex> lock{joinMutex};
+
     if (!thread.joinable()) {
         return;
     }
