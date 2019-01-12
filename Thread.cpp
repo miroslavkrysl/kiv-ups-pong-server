@@ -16,7 +16,7 @@ bool Thread::start()
     }
 
     terminate = false;
-    thread = std::thread(&Thread::run, this);
+    thread = std::thread(&Thread::execute, this);
 
     return true;
 }
@@ -68,4 +68,17 @@ bool Thread::shouldStop()
 bool Thread::isRunning()
 {
     return thread.joinable();
+}
+
+void Thread::before()
+{}
+
+void Thread::after()
+{}
+
+void Thread::execute()
+{
+    before();
+    run();
+    after();
 }
