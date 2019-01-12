@@ -19,7 +19,7 @@ private:
 
 public:
     explicit Packet(std::string type = "");
-    explicit Packet(std::string type = "", std::list<std::string> items);
+    explicit Packet(std::string type, std::list<std::string> items);
 
     void parse(std::string contents) override;
     std::string serialize() override;
