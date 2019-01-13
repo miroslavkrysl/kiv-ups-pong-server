@@ -129,7 +129,7 @@ void Server::before()
 
 void Server::after()
 {
-    shell.stop(true);
+    shell.stop(false);
     connectionAcceptor.stop(true);
     connectionWatcher.stop(true);
 

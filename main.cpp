@@ -1,8 +1,15 @@
 #include <iostream>
 #include <getopt.h>
+#include <csignal>
 
 #include "Network/Server.h"
 #include "Utils/Shell.h"
+
+Server *server = nullptr;
+
+void signalHandler(int signum) {
+    server->stop(false);
+}
 
 bool isValidPort(unsigned long port)
 {
@@ -61,9 +68,14 @@ int main(int argc, char *argv[])
     }
 
     try {
-        Server server{port, ip};
-        server.start();
-        server.join();
+        server = new Server{port, ip};
+        server->start();
+
+        // register sigterm and sigint handler
+        signal(SIGTERM, signalHandler);
+        signal(SIGINT, signalHandler);
+
+        server->join();
     }
     catch (std::exception &exception) {
         exit(EXIT_FAILURE);

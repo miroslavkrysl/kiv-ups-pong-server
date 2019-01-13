@@ -12,7 +12,6 @@
 #include "Connection.h"
 #include "../Utils/Logger.h"
 #include "../Utils/Shell.h"
-#include "../Game/PlayerState.h"
 
 class Server: public Thread
 {
