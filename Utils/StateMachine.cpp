@@ -1,22 +1,11 @@
 #include "StateMachine.h"
 
-StateMachine::StateMachine(std::map<int, std::map<int, int>> transitions, int startState)
-{
-    for (auto stateTransition : transitions) {
-        addState(stateTransition.first);
-    }
-
-    for (auto stateTransition : transitions) {
-        for (auto inputState : stateTransition.second) {
-            addTransition(stateTransition.first, inputState.second, inputState.first);
-        }
-    }
-
-    setCurrentState(startState);
-}
-
 void StateMachine::addState(int state)
 {
+    if (transitions.empty()) {
+        currentState = state;
+    }
+
     auto inserted = transitions.emplace(std::make_pair(state, std::map<int, int>{}));
 
     if (!inserted.second) {
@@ -55,11 +44,18 @@ void StateMachine::setCurrentState(int state)
 
 int StateMachine::getCurrentState()
 {
+    if (transitions.empty()) {
+        throw StateMachineException("state machine has no states");
+    }
     return currentState;
 }
 
 void StateMachine::doTransition(int input)
 {
+    if (transitions.empty()) {
+        throw StateMachineException("state machine has no states");
+    }
+
     auto currentTransitions = transitions.find(currentState)->second;
 
     auto transition = currentTransitions.find(input);

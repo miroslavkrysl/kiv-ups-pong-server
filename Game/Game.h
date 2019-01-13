@@ -4,7 +4,12 @@
 #include <chrono>
 #include "BallState.h"
 #include "PlayerState.h"
-#include "../Utils/StateMachine.h"
+#include "GameStateMachine.h"
+
+enum class PlayerSide {
+    Left,
+    Right,
+};
 
 class Game
 {
@@ -31,36 +36,13 @@ public:
 
     static const int8_t MAX_SCORE{INT8_MAX};
 
-
-    enum class GameState {
-        NewRound,
-        BallReady,
-        BallToLeft,
-        BallToRight,
-    };
-
-    enum class PlayerSide {
-        Left,
-        Right,
-    };
-
-    enum class GameEvent {
-        NewBall,
-        BallHitLeft,
-        BallHitRight,
-        BallMissLeft,
-        BallMissRight,
-        BallStartLeft,
-        BallStartRight,
-    };
-
 private:
-    StateMachine stateMachine;
+    GameStateMachine stateMachine;
     BallState ball;
     PlayerState playerLeft;
     PlayerState playerRight;
-    std::tuple<std::string> nicknames;
-    std::tuple<uint8_t> score;
+    std::pair<std::string, std::string> nicknames;
+    std::pair<uint8_t, uint8_t> score;
 
     const std::chrono::steady_clock::time_point startTime;
 
@@ -75,8 +57,8 @@ public:
     PlayerSide getPlayerSide(std::string nickname);
     int32_t getTime();
 
-    void updatePlayerState(std::string nickname, PlayerState);
-    void updateBallState(std::string nickname, PlayerState);
+    void updatePlayerState(std::string nickname, PlayerState state);
+    void updateBallState(BallState state);
     void ballHit(std::string nickname);
     void ballMiss(std::string nickname);
 
@@ -87,5 +69,11 @@ class GameException: public std::runtime_error
 {
     using std::runtime_error::runtime_error;
 };
+
+class GamePlayException: public std::runtime_error
+{
+    using std::runtime_error::runtime_error;
+};
+
 
 

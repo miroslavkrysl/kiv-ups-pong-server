@@ -12,6 +12,7 @@ class BallState
     int8_t direction;
     int16_t speed;
 
+public:
     explicit BallState();
     explicit BallState(int16_t position, int8_t direction, int16_t speed);
     explicit BallState(std::list<std::string> items);

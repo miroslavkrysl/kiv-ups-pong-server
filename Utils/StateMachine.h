@@ -10,15 +10,16 @@ class StateMachineException: public std::runtime_error
 class StateMachine
 {
     std::map<int, std::map<int, int>> transitions;
-    int currentState;
-    void setCurrentState(int state);
-    void addState(int state);
-    void addTransition(int startState, int endState, int input);
+    int currentState{};
 
 public:
-    explicit StateMachine(std::map<int, std::map<int, int>> transitions, int startState);
-    void doTransition(int input);
-    int getCurrentState();
+    StateMachine() = default;
+    virtual void addState(int state);
+
+    virtual void addTransition(int startState, int endState, int input);
+    virtual void setCurrentState(int state);
+    virtual int getCurrentState();
+    virtual void doTransition(int input);
 };
 
 
