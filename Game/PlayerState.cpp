@@ -18,7 +18,6 @@ PlayerState::PlayerState(std::list<std::string> items)
         throw EntityException("too few items to create a PlayerState");
     }
 
-    std::istringstream ss{};
     auto itemPtr = items.begin();
     int position;
 
@@ -87,5 +86,5 @@ PlayerState::Direction PlayerState::getDirection()
 
 bool PlayerState::isValidPosition(int position)
 {
-    return position < POSITION_MAX && position > POSITION_MIN;
+    return position <= POSITION_MAX && position >= POSITION_MIN;
 }
