@@ -16,6 +16,14 @@ public:
     };
 
 private:
+    std::string baseLogFileName;
+    std::string communicationLogFileName;
+    std::string statsFileName;
+
+    std::mutex baseLogMutex;
+    std::mutex communicationLogMutex;
+    std::mutex statsMutex;
+
     std::fstream baseLogFile;
     std::fstream communicationLogFile;
     std::fstream statsFile;

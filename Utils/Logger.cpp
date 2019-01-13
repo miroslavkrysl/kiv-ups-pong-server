@@ -5,6 +5,9 @@
 #include "Decor.h"
 
 Logger::Logger(std::string baseLogFile, std::string communicationLogFile, std::string statsFile)
+    : baseLogFileName(baseLogFile),
+      communicationLogFileName(communicationLogFile),
+      statsFileName(statsFile)
 {
     this->baseLogFile.open(baseLogFile, std::ios::out);
     if (!this->baseLogFile.is_open()) {
@@ -38,6 +41,8 @@ void Logger::log(const std::string &message, Level level)
         break;
     }
 
+    std::lock_guard<std::mutex> lock{baseLogMutex};
+
     std::cout << color << message << reset << std::endl;
     baseLogFile << message << std::endl;
 }
@@ -55,11 +60,15 @@ void Logger::logCommunication(Packet &packet, bool incoming, std::string id)
                   << std::endl;
     }
 
+    std::lock_guard<std::mutex> lock{communicationLogMutex};
     communicationLogFile << serialized << std::endl;
 }
 
 void Logger::writeStats(Stats &stats)
 {
+    std::lock_guard<std::mutex> lock{statsMutex};
+    statsFile.close();
+    statsFile.open(statsFileName);
     statsFile << stats.toLogString() << std::endl;
 }
 
