@@ -1,116 +1,73 @@
 #include "BallState.h"
-#include "Game.h"
-#include "../Utils/Exceptions.h"
 
 BallState::BallState()
-    : position{0},
-      direction{0},
-      speed{Game::BALL_SPEED_MIN}
+    : timestamp_{0},
+      position_{0},
+      direction_{0},
+      speed_{BALL_SPEED_MIN}
 {}
 
-BallState::BallState(int16_t position, int8_t direction, int16_t speed)
-    : position{position},
-      direction{direction},
-      speed{speed}
+BallState::BallState(Timestamp timestamp, BallPosition position, BallDirection direction, Speed speed)
+    : timestamp_{timestamp},
+      position_{position},
+      direction_{direction},
+      speed_{speed}
 {
-    if (!isValidPosition(position)) {
-        throw EntityException("ball position is in invalid format");
+    if (!isValidTimestamp(timestamp)) {
+        throw GameTypeException("ball timestamp is invalid");
     }
-    if (!isValidDirection(direction)) {
-        throw EntityException("ball direction is in invalid format");
+    if (!isValidBallPosition(position)) {
+        throw GameTypeException("ball position is invalid");
+    }
+    if (!isValidBallDirection(direction)) {
+        throw GameTypeException("ball direction is invalid");
     }
     if (!isValidSpeed(speed)) {
-        throw EntityException("ball speed is in invalid format");
+        throw GameTypeException("ball speed is invalid");
     }
 }
 
 BallState::BallState(std::list<std::string> items)
 {
     if (items.size() != 3) {
-        throw EntityException("too few items to create a BallState");
+        throw GameTypeException("too few items to create a BallState");
     }
 
     auto itemPtr = items.begin();
-    int position;
-
-    try {
-        position = std::stoi(*itemPtr);
-
-        if (!isValidPosition(position)) {
-            throw std::exception{};
-        }
-    }
-    catch (...) {
-        throw EntityException("ball position is in invalid format");
-    }
-
+    timestamp_ = strToTimestamp(*itemPtr);
     itemPtr++;
-    int direction;
-
-    try {
-        direction = std::stoi(*itemPtr);
-
-        if (!isValidDirection(direction)) {
-            throw std::exception{};
-        }
-    }
-    catch (...) {
-        throw EntityException("ball direction is in invalid format");
-    }
-
+    position_ = strToBallPosition(*itemPtr);
     itemPtr++;
-    int speed;
-
-    try {
-        speed = std::stoi(*itemPtr);
-
-        if (!isValidPosition(speed)) {
-            throw std::exception{};
-        }
-    }
-    catch (...) {
-        throw EntityException("ball speed is in invalid format");
-    }
-
-    this->position = static_cast<int16_t>(position);
-    this->direction = static_cast<int8_t>(direction);
-    this->speed = static_cast<int16_t>(speed);
+    direction_ = strToBallDirection(*itemPtr);
+    itemPtr++;
+    speed_ = strToSpeed(*itemPtr);
 }
 
 void BallState::itemize(std::list<std::string> &destination)
 {
     destination.clear();
-    destination.push_back(std::to_string(position));
-    destination.push_back(std::to_string(direction));
-    destination.push_back(std::to_string(speed));
+    destination.push_back(std::to_string(timestamp_));
+    destination.push_back(std::to_string(position_));
+    destination.push_back(std::to_string(direction_));
+    destination.push_back(std::to_string(speed_));
 }
 
-int16_t BallState::getPosition()
+Timestamp BallState::timestamp()
 {
-    return position;
+    return timestamp_;
 }
 
-int8_t BallState::getDirection()
+BallPosition BallState::position()
 {
-    return direction;
+    return position_;
 }
 
-int16_t BallState::getSpeed()
+BallDirection BallState::direction()
 {
-    return speed;
+    return direction_;
 }
 
-bool BallState::isValidPosition(int position)
+Speed BallState::speed()
 {
-    return position <= Game::BALL_POSITION_MAX && position >= Game::BALL_POSITION_MIN;
-}
-
-bool BallState::isValidDirection(int direction)
-{
-    return direction <= Game::BALL_DIRECTION_MAX && direction >= Game::BALL_DIRECTION_MIN;
-}
-
-bool BallState::isValidSpeed(int speed)
-{
-    return speed <= Game::BALL_SPEED_MAX && speed >= Game::BALL_SPEED_MIN;;
+    return speed_;
 }

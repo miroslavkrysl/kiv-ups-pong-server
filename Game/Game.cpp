@@ -1,5 +1,3 @@
-#include <utility>
-
 #include "Game.h"
 
 Game::Game(std::string playerLeft, std::string playerRight)
@@ -70,35 +68,44 @@ PlayerSide Game::getPlayerSide(std::string nickname)
     throw GameException("No such player: " + nickname);
 }
 
-int32_t Game::getTime()
+Timestamp Game::getTime()
 {
     auto now = std::chrono::steady_clock::now();
-    std::chrono::duration<int32_t, std::milli>
+    std::chrono::duration<Timestamp, std::milli>
         time = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime);
     return time.count();
 }
 
-void Game::updatePlayerState(std::string nickname, PlayerState)
+void Game::updatePlayerState(std::string nickname, PlayerState state)
 {
-    // TODO: validate player state
+    PlayerState oldState = getPlayerState(std::move(nickname));
+
+    // TODO: handle player update
 }
 
-void Game::updateBallState(BallState state)
-{
-    // TODO: validate ball state
-}
-
-void Game::ballHit(std::string nickname)
+void Game::ballHit(std::string nickname, PlayerState state, BallState ballState)
 {
     // TODO: do hit event
 }
 
-void Game::ballMiss(std::string nickname)
+void Game::ballMiss(std::string nickname, PlayerState state)
 {
     // TODO: do miss event
 }
 
-bool Game::isValidTime(unsigned int time)
+bool Game::isInPast(Timestamp time)
 {
     return time <= getTime();
+}
+
+PlayerState Game::getNextPlayerState(BallState &state, Timestamp timestamp)
+{
+    // TODO: implement get next player state
+    return PlayerState();
+}
+
+BallState Game::getNextBallState(BallState &state)
+{
+    // TODO: implement get next ball state
+    return BallState();
 }

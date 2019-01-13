@@ -1,100 +1,62 @@
 #include <sstream>
 
 #include "PlayerState.h"
-#include "Game.h"
-#include "../Utils/Exceptions.h"
 
 PlayerState::PlayerState()
-    : position{0},
-      direction{Direction::Stop}
-{
-    if (!isValidPosition(position)) {
-        throw EntityException("player position is in invalid format");
-    }
-}
+    : timestamp_{0},
+      position_{0},
+      direction_{PlayerDirection::Stop}
+{}
 
-PlayerState::PlayerState(int16_t position, Direction direction)
-    : position{position},
-      direction{direction}
+PlayerState::PlayerState(Timestamp timestamp, PlayerPosition position, PlayerDirection direction)
+    : timestamp_{timestamp},
+      position_{position},
+      direction_{direction}
 {
-    if (!isValidPosition(position)) {
-        throw EntityException("player position is in invalid format");
+    if (!isValidTimestamp(timestamp)) {
+        throw GameTypeException("player timestamp is invalid");
+    }
+    if (!isValidPlayerPosition(position)) {
+        throw GameTypeException("player position is invalid");
+    }
+    if (!isValidPlayerDirection(direction)) {
+        throw GameTypeException("player direction is invalid");
     }
 }
 
 PlayerState::PlayerState(std::list<std::string> items)
 {
     if (items.size() != 2) {
-        throw EntityException("too few items to create a PlayerState");
+        throw GameTypeException("too few items to create a PlayerState");
     }
 
     auto itemPtr = items.begin();
-    int position;
-
-    try {
-        position = std::stoi(*itemPtr);
-
-        if (!isValidPosition(position)) {
-            throw std::exception{};
-        }
-    }
-    catch (...) {
-        throw EntityException("player position is in invalid format");
-    }
-
+    timestamp_ = strToTimestamp(*itemPtr);
     itemPtr++;
-    Direction direction;
-
-    if (*itemPtr == "up") {
-        direction = Direction::Up;
-    }
-    else if (*itemPtr == "down") {
-        direction = Direction::Down;
-    }
-    else if (*itemPtr == "stop") {
-        direction = Direction::Stop;
-    }
-    else {
-        throw EntityException("player direction is in invalid format");
-    }
-
-    this->position = static_cast<int16_t>(position);
-    this->direction = direction;
+    position_ = strToPlayerPosition(*itemPtr);
+    itemPtr++;
+    direction_ = strToPlayerDirection(*itemPtr);
 }
 
 void PlayerState::itemize(std::list<std::string> &destination)
 {
     destination.clear();
-    destination.push_back(std::to_string(position));
-
-    std::string dir;
-
-    switch (direction) {
-    case Direction::Up:
-        dir = "up";
-        break;
-    case Direction::Down:
-        dir = "down";
-        break;
-    case Direction::Stop:
-        dir = "stop";
-        break;
-    }
-
-    destination.push_back(dir);
+    destination.push_back(timestampToStr(timestamp_));
+    destination.push_back(playerPositionToStr(position_));
+    destination.push_back(playerDirectionToStr(direction_));
 }
 
-int16_t PlayerState::getPosition()
+Timestamp PlayerState::timestamp()
 {
-    return position;
+    return timestamp_;
 }
 
-PlayerState::Direction PlayerState::getDirection()
+PlayerPosition PlayerState::position()
 {
-    return direction;
+    return position_;
 }
 
-bool PlayerState::isValidPosition(int position)
+PlayerDirection PlayerState::direction()
 {
-    return position <= Game::PLAYER_POSITION_MAX && position >= Game::PLAYER_POSITION_MIN;
+    return direction_;
 }

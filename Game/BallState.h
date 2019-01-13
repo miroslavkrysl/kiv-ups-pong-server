@@ -4,28 +4,28 @@
 #include <string>
 #include <list>
 
+#include "GameTypes.h"
+
 class Game;
 
 class BallState
 {
-    int16_t position;
-    int8_t direction;
-    int16_t speed;
+    Timestamp timestamp_;
+    BallPosition position_;
+    BallDirection direction_;
+    Speed speed_;
 
 public:
-    explicit BallState();
-    explicit BallState(int16_t position, int8_t direction, int16_t speed);
+    BallState();
+    BallState(Timestamp timestamp, BallPosition position, BallDirection direction, Speed speed);
     explicit BallState(std::list<std::string> items);
 
     void itemize(std::list<std::string> &destination);
 
-    int16_t getPosition();
-    int8_t getDirection();
-    int16_t getSpeed();
-
-    bool isValidPosition(int position);
-    bool isValidDirection(int direction);
-    bool isValidSpeed(int speed);
+    Timestamp timestamp();
+    BallPosition position();
+    BallDirection direction();
+    Speed speed();
 };
 
 

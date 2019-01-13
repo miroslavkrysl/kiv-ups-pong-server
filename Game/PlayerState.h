@@ -3,31 +3,26 @@
 #include <string>
 #include <list>
 
-class Game;
+#include "GameTypes.h"
+
+enum class PlayerDirection;
 
 class PlayerState
 {
-    enum class Direction
-    {
-        Up,
-        Down,
-        Stop
-    };
-
-    int16_t position;
-    Direction direction;
+    Timestamp timestamp_;
+    PlayerPosition position_;
+    PlayerDirection direction_;
 
 public:
     PlayerState();
-    explicit PlayerState(int16_t position, Direction direction);
+    PlayerState(Timestamp timestamp, PlayerPosition position, PlayerDirection direction);
     explicit PlayerState(std::list<std::string> items);
 
     void itemize(std::list<std::string> &destination);
 
-    int16_t getPosition();
-    Direction getDirection();
-
-    bool isValidPosition(int position);
+    Timestamp timestamp();
+    PlayerPosition position();
+    PlayerDirection direction();
 };
 
 

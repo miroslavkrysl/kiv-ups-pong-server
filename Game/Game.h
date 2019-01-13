@@ -2,51 +2,26 @@
 
 #include <array>
 #include <chrono>
+#include <stdexcept>
+
 #include "BallState.h"
 #include "PlayerState.h"
 #include "GameStateMachine.h"
 
-enum class PlayerSide {
-    Left,
-    Right,
-};
-
 class Game
 {
-public:
-    static const int16_t GAME_WIDTH{1920};
-    static const int16_t GAME_HEIGHT{1080};
-
-    static const int16_t BALL_RADIUS{25};
-
-    static const int16_t BALL_POSITION_MAX{(GAME_HEIGHT / 2) - BALL_RADIUS};
-    static const int16_t BALL_POSITION_MIN{-(GAME_HEIGHT / 2) + BALL_RADIUS};
-
-    static const int8_t BALL_DIRECTION_MAX{60};
-    static const int8_t BALL_DIRECTION_MIN{-60};
-
-    static const int16_t BALL_SPEED_MAX{1920};
-    static const int16_t BALL_SPEED_MIN{640};
-
-    static const int16_t PLAYER_HEIGHT{320};
-    static const int16_t PLAYER_SPEED{400};
-
-    static const int16_t PLAYER_POSITION_MAX{(GAME_HEIGHT / 2) - (PLAYER_HEIGHT / 2)};
-    static const int16_t PLAYER_POSITION_MIN{-(GAME_HEIGHT / 2) + (PLAYER_HEIGHT / 2)};
-
-    static const int8_t MAX_SCORE{INT8_MAX};
-
-private:
     GameStateMachine stateMachine;
     BallState ball;
     PlayerState playerLeft;
     PlayerState playerRight;
     std::pair<std::string, std::string> nicknames;
-    std::pair<uint8_t, uint8_t> score;
+    std::pair<Score, Score> score;
 
     const std::chrono::steady_clock::time_point startTime;
 
     PlayerState *getPlayerStatePtr(std::string nickname);
+    PlayerState getNextPlayerState(BallState &state, Timestamp timestamp);
+    BallState getNextBallState(BallState &state);
 
 public:
     Game(std::string playerLeft, std::string playerRight);
@@ -55,14 +30,13 @@ public:
     PlayerState &getOpponentState(std::string nickname);
     BallState &getBallState();
     PlayerSide getPlayerSide(std::string nickname);
-    int32_t getTime();
+    Timestamp getTime();
 
     void updatePlayerState(std::string nickname, PlayerState state);
-    void updateBallState(BallState state);
-    void ballHit(std::string nickname);
-    void ballMiss(std::string nickname);
+    void ballHit(std::string nickname, PlayerState state, BallState ballState);
+    void ballMiss(std::string nickname, PlayerState state);
 
-    bool isValidTime(unsigned int time);
+    bool isInPast(Timestamp timestamp);
 };
 
 class GameException: public std::runtime_error
