@@ -4,6 +4,7 @@
 #include <iterator>
 
 #include "Shell.h"
+#include "../Network/Server.h"
 
 Shell::Shell(const std::istream &input, const std::ostream &output, Server &server)
     : input(const_cast<std::istream &>(input)),
@@ -13,9 +14,15 @@ Shell::Shell(const std::istream &input, const std::ostream &output, Server &serv
 
 void Shell::run()
 {
+    server.getLogger().log("shell running");
+
     while (!shouldStop() && !input.eof()) {
         std::string command;
         getline(input, command);
+
+        if (input.eof()) {
+            break;
+        }
 
         try {
             handle(command);
@@ -50,8 +57,8 @@ void Shell::handle(std::string line)
 
 void Shell::cmdExit(std::vector<std::string> arguments)
 {
-    server.stop(true);
     stop(false);
+    server.stop(false);
 }
 
 void Shell::cmdGames(std::vector<std::string> arguments)
@@ -91,4 +98,15 @@ void Shell::cmdHelp(std::vector<std::string> arguments)
 {
     // TODO: print help
     output << "info" << std::endl;
+}
+
+void Shell::after()
+{
+    server.getLogger().log("shell stopped", Logger::Level::Warning);
+}
+
+bool Shell::stop(bool wait)
+{
+    input.setstate(std::istream::failbit);
+    return Thread::stop(wait);
 }

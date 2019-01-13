@@ -14,7 +14,6 @@ public:
 
     void run() override;
     bool stop(bool wait) override;
-    void before() override;
     void after() override;
 };
 

@@ -7,7 +7,8 @@
 #include <functional>
 #include <unordered_map>
 #include "Thread.h"
-#include "../Network/Server.h"
+
+class Server;
 
 class Shell: public Thread
 {
@@ -36,7 +37,8 @@ class Shell: public Thread
 public:
     Shell(const std::istream &input, const std::ostream &output, Server &server);
     void run() override;
-    void print(std::string &message);
+    void after() override;
+    bool stop(bool wait) override;
 };
 
 class UnknownCommandException: public std::runtime_error

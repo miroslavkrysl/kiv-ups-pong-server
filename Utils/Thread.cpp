@@ -16,6 +16,8 @@ bool Thread::start()
     }
 
     terminate = false;
+
+    before();
     thread = std::thread(&Thread::execute, this);
 
     return true;
@@ -38,19 +40,20 @@ bool Thread::stop(bool wait)
 
 bool Thread::join()
 {
-    std::unique_lock<std::mutex> lock{joinMutex};
+    std::lock_guard<std::mutex> lock{joinMutex};
 
     if (!thread.joinable()) {
         return false;
     }
 
     thread.join();
+
     return true;
 }
 
 bool Thread::detach()
 {
-    std::unique_lock<std::mutex> lock{joinMutex};
+    std::lock_guard<std::mutex> lock{joinMutex};
 
     if (!thread.joinable()) {
         return false;
@@ -78,7 +81,6 @@ void Thread::after()
 
 void Thread::execute()
 {
-    before();
     run();
     after();
 }

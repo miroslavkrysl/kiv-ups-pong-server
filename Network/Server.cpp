@@ -9,11 +9,13 @@
 #include <iostream>
 
 #include "Server.h"
+#include "../Utils/Shell.h"
 
-Server::Server(uint16_t port, std::string ipAddress, Logger &logger)
+Server::Server(uint16_t port, std::string ipAddress)
     : connectionAcceptor{*this},
       connectionWatcher{*this},
-      logger(logger)
+      logger{"server.log", "communication.log", "stats.log"},
+      shell{std::cin, std::cout, *this}
 {
     memset(&address, 0, sizeof(address));
 
@@ -36,16 +38,16 @@ void Server::run()
 {
     stats.setStarted(std::chrono::system_clock::now());
 
-    connectionAcceptor.start();
-    connectionWatcher.start();
+    // periodically check connections states and remove them eventually
+    while (!shouldStop()) {
 
-    connectionAcceptor.join();
-    connectionWatcher.stop(true);
+        if (stats.hasChanged()) {
+            logger.writeStats(stats);
+        }
 
-    forEachConnection([](Connection &connection)
-                      {
-                          connection.stop(true);
-                      });
+
+        std::this_thread::sleep_for(STATS_WRITE_PERIOD);
+    }
 }
 
 Connection &Server::addConnection(int socket, sockaddr_in address)
@@ -112,15 +114,30 @@ bool Server::stop(bool wait)
 {
     connectionAcceptor.stop(false);
     connectionWatcher.stop(false);
+    shell.stop(false);
     return Thread::stop(wait);
 }
 
 void Server::before()
 {
     logger.log("starting server");
+
+    connectionAcceptor.start();
+    connectionWatcher.start();
+    shell.start();
 }
 
 void Server::after()
 {
+    shell.stop(true);
+    connectionAcceptor.stop(true);
+    connectionWatcher.stop(true);
+
+    forEachConnection([](Connection &connection)
+                      {
+                          connection.stop(true);
+                      });
+
+
     logger.log("server stopped", Logger::Level::Warning);
 }

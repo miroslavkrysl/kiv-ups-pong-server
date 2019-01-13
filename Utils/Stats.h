@@ -21,6 +21,8 @@ class Stats
     std::mutex packetsSentMutex;
     std::mutex bytesSentMutex;
 
+    bool changed;
+
 public:
     Stats();
 
@@ -32,6 +34,7 @@ public:
     void addPacketsSent(uint64_t count);
     void addBytesSent(uint64_t count);
 
+    bool hasChanged();
     std::string toLogString();
 };
 

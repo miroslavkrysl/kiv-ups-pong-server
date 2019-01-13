@@ -9,7 +9,8 @@ Stats::Stats()
       bytesReceived{0},
       bytesDropped{0},
       messagesSent{0},
-      bytesSent{0}
+      bytesSent{0},
+      changed{true}
 {}
 
 void Stats::setStarted(std::chrono::system_clock::time_point started)
@@ -77,4 +78,13 @@ std::string Stats::toLogString()
     stream << "Bytes dropped: " << messagesDropped << std::endl;
 
     return stream.str();
+}
+
+bool Stats::hasChanged()
+{
+    if (changed) {
+        changed = false;
+        return true;
+    }
+    return false;
 }

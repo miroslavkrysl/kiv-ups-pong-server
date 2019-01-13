@@ -11,11 +11,15 @@
 #include "ConnectionWatcher.h"
 #include "Connection.h"
 #include "../Utils/Logger.h"
+#include "../Utils/Shell.h"
 #include "../Game/PlayerState.h"
 
 class Server: public Thread
 {
-    Logger &logger;
+    const std::chrono::seconds STATS_WRITE_PERIOD{3};
+
+    Logger logger;
+    Shell shell;
     Stats stats;
     ConnectionAcceptor connectionAcceptor;
     ConnectionWatcher connectionWatcher;
@@ -27,7 +31,7 @@ class Server: public Thread
 
 public:
 
-    explicit Server(uint16_t port, std::string ipAddress, Logger &logger_);
+    explicit Server(uint16_t port, std::string ipAddress = "");
 
     Stats &getStats();
     Logger &getLogger();

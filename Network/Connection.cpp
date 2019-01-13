@@ -23,12 +23,11 @@ Connection::Connection(int socket, sockaddr_in address, Server &server)
 
 void Connection::run()
 {
+    server.getLogger().log("connection listening: " + ipString, Logger::Level::Success);
+
     char buffer[1024];
     std::string data;
     int corruptedPackets{0};
-
-    setMode(Mode::Idle);
-
 
     while (!shouldStop() && !isClosed()) {
 
@@ -204,7 +203,7 @@ bool Connection::stop(bool wait)
 
 void Connection::before()
 {
-    server.getLogger().log("connection listening: " + ipString, Logger::Level::Success);
+    setMode(Mode::Idle);
 }
 
 void Connection::after()
