@@ -30,7 +30,7 @@ void printHelp(char *name)
 
 int main(int argc, char *argv[])
 {
-    uint16_t port = 8191;
+    uint16_t port = 44445;
     std::string ip;
 
     int opt;
@@ -54,9 +54,7 @@ int main(int argc, char *argv[])
             printHelp(argv[0]);
             exit(EXIT_SUCCESS);
         }
-        default: {
-            printf("error: invalid option %c\n\n", opt);
-            printHelp(argv[0]);
+        default:{
             exit(EXIT_FAILURE);
         }
         }

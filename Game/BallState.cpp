@@ -1,5 +1,12 @@
 #include "BallState.h"
+#include "Game.h"
 #include "../Utils/Exceptions.h"
+
+BallState::BallState()
+    : position{0},
+      direction{0},
+      speed{Game::BALL_SPEED_MIN}
+{}
 
 BallState::BallState(int16_t position, int8_t direction, int16_t speed)
     : position{position},
@@ -95,15 +102,15 @@ int16_t BallState::getSpeed()
 
 bool BallState::isValidPosition(int position)
 {
-    return position <= POSITION_MAX && position >= POSITION_MIN;
+    return position <= Game::BALL_POSITION_MAX && position >= Game::BALL_POSITION_MIN;
 }
 
 bool BallState::isValidDirection(int direction)
 {
-    return direction <= DIRECTION_MAX && direction >= DIRECTION_MIN;
+    return direction <= Game::BALL_DIRECTION_MAX && direction >= Game::BALL_DIRECTION_MIN;
 }
 
 bool BallState::isValidSpeed(int speed)
 {
-    return speed <= SPEED_MAX && speed >= SPEED_MIN;;
+    return speed <= Game::BALL_SPEED_MAX && speed >= Game::BALL_SPEED_MIN;;
 }

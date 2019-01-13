@@ -1,7 +1,17 @@
 #include <sstream>
 
 #include "PlayerState.h"
+#include "Game.h"
 #include "../Utils/Exceptions.h"
+
+PlayerState::PlayerState()
+    : position{0},
+      direction{Direction::Stop}
+{
+    if (!isValidPosition(position)) {
+        throw EntityException("player position is in invalid format");
+    }
+}
 
 PlayerState::PlayerState(int16_t position, Direction direction)
     : position{position},
@@ -86,5 +96,5 @@ PlayerState::Direction PlayerState::getDirection()
 
 bool PlayerState::isValidPosition(int position)
 {
-    return position <= POSITION_MAX && position >= POSITION_MIN;
+    return position <= Game::PLAYER_POSITION_MAX && position >= Game::PLAYER_POSITION_MIN;
 }
