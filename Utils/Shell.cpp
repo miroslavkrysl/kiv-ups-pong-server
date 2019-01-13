@@ -65,6 +65,8 @@ void Shell::cmdGames(std::vector<std::string> arguments)
 {
     auto &output = this->output;
 
+    output << HLINE << std::endl;
+
     size_t count = server.forEachConnection([&output](Connection &connection){
         // TODO: print games
         output << "game" << std::endl;
@@ -73,11 +75,15 @@ void Shell::cmdGames(std::vector<std::string> arguments)
     if (count == 0) {
         output << "-no games active-" << std::endl;
     }
+
+    output << HLINE << std::endl;
 }
 
 void Shell::cmdPlayers(std::vector<std::string> arguments)
 {
     auto &output = this->output;
+
+    output << HLINE << std::endl;
 
     size_t count = server.forEachConnection([&output](Connection &connection){
         // TODO: print players
@@ -87,17 +93,23 @@ void Shell::cmdPlayers(std::vector<std::string> arguments)
     if (count == 0) {
         output << "-no players active-" << std::endl;
     }
+
+    output << HLINE << std::endl;
 }
 
 void Shell::cmdInfo(std::vector<std::string> arguments)
 {
+    output << HLINE << std::endl;
     output << server.getStats().toLogString();
+    output << HLINE << std::endl;
 }
 
 void Shell::cmdHelp(std::vector<std::string> arguments)
 {
+    output << HLINE << std::endl;
     // TODO: print help
     output << "info" << std::endl;
+    output << HLINE << std::endl;
 }
 
 void Shell::after()
@@ -107,6 +119,5 @@ void Shell::after()
 
 bool Shell::stop(bool wait)
 {
-    input.setstate(std::istream::failbit);
     return Thread::stop(wait);
 }

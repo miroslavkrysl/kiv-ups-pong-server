@@ -16,6 +16,8 @@ class Shell: public Thread
     std::ostream &output;
     Server &server;
 
+    const std::string HLINE{"------------------------------------------------------------"};
+
     typedef void (Shell::*Command)(std::vector<std::string>);
 
     std::unordered_map<std::string, Command> actions{
