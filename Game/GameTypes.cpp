@@ -15,6 +15,11 @@ bool isValidSpeed(unsigned long speed)
     return speed <= BALL_SPEED_MAX && speed >= BALL_SPEED_MIN;;
 }
 
+bool isValidScore(unsigned long score)
+{
+    return score <= MAX_SCORE;
+}
+
 bool isValidPlayerPosition(int position)
 {
     return position <= PLAYER_POSITION_MAX && position >= PLAYER_POSITION_MIN;
@@ -83,6 +88,24 @@ Speed strToSpeed(std::string &str)
     }
 
     return static_cast<Speed>(speed);
+}
+
+Score strToScore(std::string &str)
+{
+    unsigned long score;
+
+    try {
+        score = std::stoul(str);
+
+        if (!isValidSpeed(score)) {
+            throw std::exception{};
+        }
+    }
+    catch (...) {
+        throw GameTypeException("score is in invalid format");
+    }
+
+    return static_cast<Score>(score);
 }
 
 PlayerPosition strToPlayerPosition(std::string &str)
