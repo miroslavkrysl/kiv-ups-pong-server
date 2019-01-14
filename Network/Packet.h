@@ -25,8 +25,10 @@ public:
     std::string serialize() override;
     void clear() override;
 
-    void addItem(std::string &item);
+    void addItem(std::string item);
 
+    void setType(std::string type);
+    std::string getType();
     std::list<std::string> &getItems();
 };
 

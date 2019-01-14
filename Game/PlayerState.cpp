@@ -26,7 +26,7 @@ PlayerState::PlayerState(Timestamp timestamp, PlayerPosition position, PlayerDir
 
 PlayerState::PlayerState(std::list<std::string> items)
 {
-    if (items.size() != 2) {
+    if (items.size() != ITEMS_COUNT) {
         throw GameTypeException("too few items to create a PlayerState");
     }
 

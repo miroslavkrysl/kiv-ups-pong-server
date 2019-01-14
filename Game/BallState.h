@@ -10,6 +10,10 @@ class Game;
 
 class BallState
 {
+public:
+    static const size_t ITEMS_COUNT{4};
+
+private:
     Timestamp timestamp_;
     BallPosition position_;
     BallDirection direction_;

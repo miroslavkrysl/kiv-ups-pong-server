@@ -71,6 +71,13 @@ size_t Server::filterConnections(std::function<bool(Connection &)> filter)
 
     while (connectionPtr != connections.end()) {
         if (filter(*connectionPtr)) {
+
+            playersMutex.lock();
+            if (connectionPtr->isIdentified()) {
+                players.erase(connectionPtr->getNickname());
+            }
+            playersMutex.unlock();
+
             connectionPtr = connections.erase(connectionPtr);
             count++;
         }
@@ -140,4 +147,26 @@ void Server::after()
 
 
     logger.log("server stopped", Logger::Level::Warning);
+}
+
+void Server::addPlayer(std::string nickname, Connection *connection)
+{
+    std::lock_guard<std::mutex> lock{playersMutex};
+
+    auto inserted = players.insert(std::make_pair(nickname, connection));
+
+    if (!inserted.second) {
+        throw ServerException("Player nickname already exists");
+    }
+}
+
+Connection &Server::getConnection(std::string nickname)
+{
+    auto found = players.find(nickname);
+
+    if (found == players.end()) {
+        throw ServerException("Player " + nickname + " does not exist");
+    }
+
+    return *found->second;
 }

@@ -9,6 +9,10 @@ enum class PlayerDirection;
 
 class PlayerState
 {
+public:
+    static const size_t ITEMS_COUNT{3};
+
+private:
     Timestamp timestamp_;
     PlayerPosition position_;
     PlayerDirection direction_;

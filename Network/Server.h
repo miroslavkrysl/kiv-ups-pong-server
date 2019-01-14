@@ -27,6 +27,8 @@ class Server: public Thread
 
     std::list<Connection> connections;
     std::mutex connectionsMutex;
+    std::unordered_map<std::string, Connection *> players;
+    std::mutex playersMutex;
 
 public:
 
@@ -39,6 +41,9 @@ public:
     Connection &addConnection(int socket, sockaddr_in address);
     size_t filterConnections(std::function<bool(Connection&)> filter);
     size_t forEachConnection(std::function<void(Connection&)> function);
+
+    void addPlayer(std::string nickname, Connection *connection);
+    Connection &getConnection(std::string nickname);
 
     void run() override;
     bool stop(bool wait) override;

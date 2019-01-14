@@ -1,8 +1,9 @@
+#include <arpa/inet.h>
 #include <unistd.h>
 
 #include <thread>
-#include <arpa/inet.h>
 #include <cstring>
+#include <regex>
 
 #include "Connection.h"
 #include "Packet.h"
@@ -12,8 +13,9 @@ Connection::Connection(int socket, sockaddr_in address, Server &server)
     : socket{socket},
       address{address},
       server{server},
-      identified{false},
-      mode{Mode::Idle}
+      nickname{""},
+      mode{Mode::Idle},
+      game{nullptr}
 {
     char ipString[INET_ADDRSTRLEN];
     ::inet_ntop(AF_INET, &(address.sin_addr), ipString, INET_ADDRSTRLEN);
@@ -100,6 +102,13 @@ void Connection::run()
                     server.getStats().addPacketsDropped(1);
                     corruptedPackets++;
                 }
+                catch (...) {
+                    server.getLogger()
+                        .log("ERROR: unrecoverable error on connection: " + getId() + " - disconnecting",
+                             Logger::Level::Error);
+                    stop(false);
+                    break;
+                }
 
                 data.clear();
             }
@@ -117,7 +126,8 @@ void Connection::run()
         if (corruptedPackets > CORRUPTED_PACKETS_LIMIT) {
             // connection probably corrupted
             server.getLogger()
-                .log("ERROR: too much corrupted data receive from the connection: " + getId() + " - disconnecting", Logger::Level::Error);
+                .log("ERROR: too much corrupted data receive from the connection: " + getId() + " - disconnecting",
+                     Logger::Level::Error);
             break;
         }
     }
@@ -163,6 +173,11 @@ void Connection::send(Packet &packet)
 bool Connection::isClosed()
 {
     return socket == -1;
+}
+
+bool Connection::isIdentified()
+{
+    return !nickname.empty();
 }
 
 std::string Connection::getId()
@@ -215,6 +230,165 @@ void Connection::after()
 
 void Connection::handlePacket(Packet packet)
 {
-    // TODO: implement packet handling
+    auto typeHandler = handlers.find(packet.getType());
+
+    if (typeHandler == handlers.end()) {
+        throw ConnectionException("unknown packet type");
+    }
+
+    Handler handler = typeHandler->second;
+
+    (this->*handler)(packet);
+}
+
+void Connection::handleLogin(Packet packet)
+{
+    if (isIdentified()) {
+        throw NonContextualPacketException{"already logged"};
+    }
+
+    auto items = packet.getItems();
+
+    if (items.size() != 1 ) {
+        throw MalformedPacketException{""};
+    }
+
+    std::regex nicknameRegex("[a-zA-Z0-9]{3,16}");
+    std::string nickname = *items.begin();
+
+    Packet response{};
+
+    if (std::regex_match(nickname, nicknameRegex)) {
+        try {
+            server.addPlayer(nickname, this);
+            this->nickname = nickname;
+            response.setType("login_ok");
+        }
+        catch (ServerException &exception) {
+            response.setType("login_failed");
+            response.addItem("exists");
+        }
+    }
+    else {
+        response.setType("login_failed");
+        response.addItem("format");
+    }
+
+    send(response);
+}
+
+void Connection::handleJoinRandomGame(Packet packet)
+{
+    if (game) {
+        throw NonContextualPacketException{"already in a game"};
+    }
+
+    if (!isIdentified()) {
+        throw NonContextualPacketException{"not logged"};
+    }
+
+
+    // TODO: handle join random game
+}
+
+void Connection::handleJoinPrivateGame(Packet packet)
+{
+    if (game) {
+        throw NonContextualPacketException{"already in a game"};
+    }
+
+    if (!isIdentified()) {
+        throw NonContextualPacketException{"not logged"};
+    }
+
+    // TODO: handle join private game
+}
+
+void Connection::handleUpdateState(Packet packet)
+{
+    if (!game) {
+        throw NonContextualPacketException{"not in a game"};
+    }
+
+    try {
+        PlayerState state{packet.getItems()};
+        game->updatePlayerState(nickname, state);
+
+        std::list<std::string> items;
+        state.itemize(items);
+
+        Packet forOpponent{"update_opponent", items};
+    }
+    catch (GameTypeException &exception) {
+        throw MalformedPacketException{exception.what()};
+    }
+    catch (GamePlayException &exception) {
+        throw InvalidPacketException{exception.what()};
+    }
+}
+
+void Connection::handleBallHit(Packet packet)
+{
+    if (!game) {
+        throw NonContextualPacketException{"not in a game"};
+    }
+
+    if (packet.getItems().size() != PlayerState::ITEMS_COUNT + BallState::ITEMS_COUNT) {
+        throw MalformedPacketException{"too few items in the packet"};
+    }
+
+    try {
+        // extract items from packet
+        std::list<std::string> packetItems = packet.getItems();
+
+        auto it = packetItems.begin();
+        std::advance(it, PlayerState::ITEMS_COUNT - 1);
+
+        std::list<std::string> playerItems{packetItems.begin(), it};
+        std::list<std::string> ballItems{packetItems.begin(), packetItems.end()};
+
+
+        // create player and ball states from items and update game
+        PlayerState playerState{playerItems};
+        game->updatePlayerState(nickname, playerState);
+
+        BallState ballState{ballItems};
+        game->ballHit(nickname, ballState);
+
+
+        // send responses
+        std::list<std::string> items;
+        Connection &opponent = server.getConnection(game->getOpponentNickname(nickname));
+
+        if (game->getState() == GameState::NewRound) {
+            game->itemize(items);
+            Packet response{"new_round", items};
+
+            send(response);
+            opponent.send(response);
+        }
+        else {
+            ballState.itemize(items);
+            Packet forOpponent{"ball_hit", items};
+            opponent.send(forOpponent);
+        }
+    }
+    catch (GameTypeException &exception) {
+        throw MalformedPacketException{exception.what()};
+    }
+    catch (GamePlayException &exception) {
+        throw InvalidPacketException{exception.what()};
+    }
+}
+
+void Connection::handleLeaveGame(Packet packet)
+{
+    // TODO: handle leave
+}
+
+void Connection::handlePoke(Packet packet)
+{
+    Packet response{"poke_back"};
+    send(response);
 }
 

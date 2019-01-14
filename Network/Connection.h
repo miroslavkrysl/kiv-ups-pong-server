@@ -1,9 +1,11 @@
 #pragma once
 
 #include <netinet/in.h>
+#include <unordered_map>
 
 #include "Packet.h"
 #include "../Utils/Thread.h"
+#include "../Game/Game.h"
 
 class Server;
 
@@ -38,10 +40,31 @@ private:
     const timeval SEND_TIMEOUT_IDLE{5, 0};
     const timeval SEND_TIMEOUT_BUSY{1, 0};
 
-    bool identified;
+    std::string nickname;
+    Game *game;
+
+    typedef void (Connection::*Handler)(Packet);
+
+    std::unordered_map<std::string, Handler> handlers{
+        {"login", &Connection::handleLogin},
+        {"join_random_game", &Connection::handleJoinRandomGame},
+        {"join_private_game", &Connection::handleJoinPrivateGame},
+        {"update_state", &Connection::handleUpdateState},
+        {"ball_hit", &Connection::handleBallHit},
+        {"leave_game", &Connection::handleLeaveGame},
+        {"poke", &Connection::handlePoke},
+    };
 
     void setMode(Mode mode);
     void handlePacket(Packet packet);
+
+    void handleLogin(Packet packet);
+    void handleJoinRandomGame(Packet packet);
+    void handleJoinPrivateGame(Packet packet);
+    void handleUpdateState(Packet packet);
+    void handleBallHit(Packet packet);
+    void handleLeaveGame(Packet packet);
+    void handlePoke(Packet packet);
 
 public:
     Connection(int socket, sockaddr_in address, Server &server);
@@ -49,6 +72,7 @@ public:
 
     void send(Packet &packet);
     bool isClosed();
+    bool isIdentified();
     std::string getId();
 
     void run() override;
@@ -60,4 +84,19 @@ public:
 class ConnectionException: public std::runtime_error
 {
     using std::runtime_error::runtime_error;
+};
+
+class NonContextualPacketException: public PacketException
+{
+    using PacketException::PacketException;
+};
+
+class MalformedPacketException: public PacketException
+{
+    using PacketException::PacketException;
+};
+
+class InvalidPacketException: public PacketException
+{
+    using PacketException::PacketException;
 };

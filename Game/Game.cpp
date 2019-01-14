@@ -1,5 +1,8 @@
+#include <utility>
+
+#include <utility>
 #include <cmath>
-#include <CLucene/util/CLStreams.h>
+
 #include "Game.h"
 
 Game::Game(std::string playerLeft, std::string playerRight)
@@ -30,14 +33,7 @@ PlayerState Game::getPlayerState(std::string nickname)
 
 PlayerState Game::getOpponentState(std::string nickname)
 {
-    if (nickname == nicknames.first) {
-        return getPlayerState_(nicknames.second);
-    }
-    else if (nickname == nicknames.second) {
-        return getPlayerState_(nicknames.first);
-    }
-
-    throw GameException("No such player: " + nickname);
+    return getPlayerState_(getOpponentNickname(std::move(nickname)));
 }
 
 BallState Game::getBallState()
@@ -105,9 +101,11 @@ void Game::ballHit(std::string nickname, BallState ballState)
     else {
         if (playerSide == Side::Left) {
             stateMachine.doTransition(GameEvent::MissLeft);
+            score.second++;
         }
         else {
             stateMachine.doTransition(GameEvent::MissRight);
+            score.first++;
         }
     }
 
@@ -134,7 +132,7 @@ PlayerState Game::expectedPlayerState(PlayerState &state, Timestamp timestamp)
     case PlayerDirection::Down: dir = -1; break;
     }
 
-    long position = static_cast<long>(state.position() + (dir * PLAYER_SPEED * seconds));
+    auto position = static_cast<long>(state.position() + (dir * PLAYER_SPEED * seconds));
 
     if (position > PLAYER_POSITION_MAX) {
         position = PLAYER_POSITION_MAX;
@@ -158,7 +156,7 @@ BallState Game::expectedBallState(BallState &state)
     long height = (GAME_HEIGHT - 2 * BALL_RADIUS);
 
     double hypotenuse = width / std::cos(std::abs(radians));
-    long hLeg = static_cast<long>(std::tan(radians) * width);
+    auto hLeg = static_cast<long>(std::tan(radians) * width);
 
     double timestamp = hypotenuse / (state.speed() / 1000.0);
     timestamp += state.timestamp();
@@ -175,8 +173,7 @@ BallState Game::expectedBallState(BallState &state)
 
 bool Game::canHit(std::string nickname, BallState &ballState)
 {
-    Side playerSide = getPlayerSide(nickname);
-    PlayerState &playerState = getPlayerState_(nickname);
+    PlayerState &playerState = getPlayerState_(std::move(nickname));
 
     return ballState.position() <= playerState.position() + (PLAYER_HEIGHT / 2)
     && ballState.position() >= playerState.position() - (PLAYER_HEIGHT / 2);
@@ -204,4 +201,23 @@ void Game::releaseBall(Side side)
 GameState Game::getState()
 {
     return stateMachine.getCurrentState();
+}
+
+std::string Game::getOpponentNickname(std::string nickname)
+{
+    if (nickname == nicknames.first) {
+        return nicknames.second;
+    }
+    else if (nickname == nicknames.second) {
+        return nicknames.first;
+    }
+
+    throw GameException("No such player: " + nickname);
+}
+
+void Game::itemize(std::list<std::string> &destination)
+{
+    destination.clear();
+    destination.push_back(scoreToStr(score.first));;
+    destination.push_back(scoreToStr(score.second));;
 }

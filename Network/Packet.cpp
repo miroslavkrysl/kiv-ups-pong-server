@@ -1,5 +1,7 @@
 #include <utility>
 
+#include <utility>
+
 #include <list>
 #include <sstream>
 #include <iostream>
@@ -70,7 +72,7 @@ void Packet::clear()
     items.clear();
 }
 
-void Packet::addItem(std::string &item)
+void Packet::addItem(std::string item)
 {
     items.push_back(item);
 }
@@ -78,4 +80,14 @@ void Packet::addItem(std::string &item)
 std::list<std::string> &Packet::getItems()
 {
     return items;
+}
+
+std::string Packet::getType()
+{
+    return type;
+}
+
+void Packet::setType(std::string type)
+{
+    this->type = std::move(type);
 }

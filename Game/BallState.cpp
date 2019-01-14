@@ -29,7 +29,7 @@ BallState::BallState(Timestamp timestamp, BallPosition position, BallDirection d
 
 BallState::BallState(std::list<std::string> items)
 {
-    if (items.size() != 3) {
+    if (items.size() != ITEMS_COUNT) {
         throw GameTypeException("too few items to create a BallState");
     }
 

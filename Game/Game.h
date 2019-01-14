@@ -9,6 +9,8 @@
 #include "PlayerState.h"
 #include "GameStateMachine.h"
 
+class Connection;
+
 class Game
 {
     GameStateMachine stateMachine;
@@ -34,6 +36,7 @@ public:
     PlayerState getOpponentState(std::string nickname);
     BallState getBallState();
     Side getPlayerSide(std::string nickname);
+    std::string getOpponentNickname(std::string nickname);
     Timestamp getTime();
     GameState getState();
 
@@ -43,6 +46,8 @@ public:
     void ballHit(std::string nickname, BallState ballState);
 
     bool isInPast(Timestamp timestamp);
+
+    void itemize(std::list<std::string> &destination);
 };
 
 class GameException: public std::runtime_error
