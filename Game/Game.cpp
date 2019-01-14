@@ -102,10 +102,18 @@ void Game::ballHit(std::string nickname, BallState ballState)
         if (playerSide == Side::Left) {
             stateMachine.doTransition(GameEvent::MissLeft);
             score.second++;
+
+            if (score.second >= maxScore) {
+                stateMachine.doTransition(GameEvent::EndGame);
+            }
         }
         else {
             stateMachine.doTransition(GameEvent::MissRight);
             score.first++;
+
+            if (score.first >= maxScore) {
+                stateMachine.doTransition(GameEvent::EndGame);
+            }
         }
     }
 

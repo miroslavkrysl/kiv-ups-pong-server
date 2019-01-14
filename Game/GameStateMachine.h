@@ -9,6 +9,7 @@ enum class GameState {
     StartRight,
     ToLeft,
     ToRight,
+    End,
 };
 
 enum class GameEvent {
@@ -19,6 +20,7 @@ enum class GameEvent {
     MissRight,
     ReleaseLeft,
     ReleaseRight,
+    EndGame,
 };
 
 class GameStateMachine

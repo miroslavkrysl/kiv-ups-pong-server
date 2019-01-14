@@ -17,6 +17,7 @@ class Game
     BallState ballState;
     PlayerState playerLeft;
     PlayerState playerRight;
+    Score maxScore;
     std::pair<std::string, std::string> nicknames;
     std::pair<Score, Score> score;
 

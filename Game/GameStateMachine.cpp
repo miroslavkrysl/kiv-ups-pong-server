@@ -8,6 +8,7 @@ GameStateMachine::GameStateMachine()
     addState(GameState::StartRight);
     addState(GameState::ToLeft);
     addState(GameState::ToRight);
+    addState(GameState::End);
 
     addTransition(GameState::NewRound, GameState::Ready, GameEvent::NewBall);
     addTransition(GameState::Ready, GameState::StartLeft, GameEvent::ReleaseLeft);
@@ -24,6 +25,7 @@ GameStateMachine::GameStateMachine()
     addTransition(GameState::ToRight, GameState::NewRound, GameEvent::MissRight);
     addTransition(GameState::ToLeft, GameState::Ready, GameEvent::NewBall);
     addTransition(GameState::ToRight, GameState::Ready, GameEvent::NewBall);
+    addTransition(GameState::NewRound, GameState::End, GameEvent::EndGame);
 
     setCurrentState(GameState::NewRound);
 }
