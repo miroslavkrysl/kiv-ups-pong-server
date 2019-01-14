@@ -25,11 +25,11 @@ bool Thread::start()
 
 bool Thread::stop(bool wait)
 {
+    terminate = true;
+
     if (!thread.joinable()) {
         return false;
     }
-
-    terminate = true;
 
     if (wait) {
         join();
