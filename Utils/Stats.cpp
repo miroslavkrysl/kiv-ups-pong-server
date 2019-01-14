@@ -75,7 +75,7 @@ std::string Stats::toLogString()
     stream << "Packets sent: " << messagesSent << std::endl;
     stream << std::endl;
     stream << "Packets dropped: " << bytesDropped << std::endl;
-    stream << "Bytes dropped: " << messagesDropped << std::endl;
+    stream << "Bytes dropped: " << messagesDropped;
 
     return stream.str();
 }

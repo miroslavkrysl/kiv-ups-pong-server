@@ -66,6 +66,7 @@ void Shell::cmdGames(std::vector<std::string> arguments)
     auto &output = this->output;
 
     output << HLINE << std::endl;
+    output << "Games:" << std::endl << std::endl;
 
     size_t count = server.forEachConnection([&output](Connection &connection){
         // TODO: print games
@@ -83,7 +84,9 @@ void Shell::cmdPlayers(std::vector<std::string> arguments)
 {
     auto &output = this->output;
 
+    output << std::endl;
     output << HLINE << std::endl;
+    output << "Players:" << std::endl << std::endl;
 
     size_t count = server.forEachConnection([&output](Connection &connection){
         output << "- " <<connection.getId() << std::endl;
@@ -94,32 +97,43 @@ void Shell::cmdPlayers(std::vector<std::string> arguments)
     }
 
     output << HLINE << std::endl;
+    output << std::endl;
 }
 
 void Shell::cmdInfo(std::vector<std::string> arguments)
 {
+    output << std::endl;
     output << HLINE << std::endl;
-    output << server.toLogString();
+    output << "Info:" << std::endl << std::endl;
+    output << server.toLogString() << std::endl;
     output << HLINE << std::endl;
+    output << std::endl;
 }
 
 void Shell::cmdStats(std::vector<std::string> arguments)
 {
+    output << std::endl;
     output << HLINE << std::endl;
-    output << server.getStats().toLogString();
+    output << "Statistics:" << std::endl << std::endl;
+    output << server.getStats().toLogString() << std::endl;
     output << HLINE << std::endl;
+    output << std::endl;
 }
 
 void Shell::cmdHelp(std::vector<std::string> arguments)
 {
+    output << std::endl;
     output << HLINE << std::endl;
+    output << "Help:" << std::endl << std::endl;
     // TODO: print help
-    output << "info" << std::endl;
+    output << "help" << std::endl;
     output << HLINE << std::endl;
+    output << std::endl;
 }
 
 void Shell::after()
 {
+    server.stop(false);
     server.getLogger().log("shell stopped", Logger::Level::Warning);
 }
 
