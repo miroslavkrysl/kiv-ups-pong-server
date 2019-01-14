@@ -4,7 +4,7 @@
 
 class Server;
 
-class ConnectionAcceptor : public Thread
+class ConnectionAcceptor: public Thread
 {
     Server &server;
     int serverSocket;
@@ -12,9 +12,9 @@ class ConnectionAcceptor : public Thread
 public:
     explicit ConnectionAcceptor(Server &server);
 
+    void before() override;
     void run() override;
     bool stop(bool wait) override;
-    void before() override;
     void after() override;
 };
 

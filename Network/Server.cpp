@@ -1,11 +1,6 @@
-#include <netinet/in.h>
-#include <zconf.h>
-#include <sys/ioctl.h>
 #include <arpa/inet.h>
-#include <fcntl.h>
 
 #include <cstring>
-#include <thread>
 #include <iostream>
 
 #include "Server.h"
@@ -13,11 +8,12 @@
 
 Server::Server(uint16_t port, std::string ipAddress)
     : connectionAcceptor{*this},
-      connectionWatcher{*this},
       port{port},
+      ipString{ipAddress},
       logger{"server.log", "communication.log", "stats.log"},
       shell{std::cin, std::cout, *this}
 {
+    // set up address structure
     memset(&address, 0, sizeof(address));
 
     address.sin_family = AF_INET;
@@ -33,79 +29,6 @@ Server::Server(uint16_t port, std::string ipAddress)
             throw ServerException("server ip address is in wrong format");
         }
     }
-
-    char ipString[INET_ADDRSTRLEN];
-    ::inet_ntop(AF_INET, &(address.sin_addr), ipString, INET_ADDRSTRLEN);
-
-    this->ipString = ipString;
-}
-
-void Server::run()
-{
-    stats.setStarted(std::chrono::system_clock::now());
-
-    // periodically check connections states and remove them eventually
-    while (!shouldStop()) {
-
-        if (stats.hasChanged()) {
-            logger.writeStats(stats);
-        }
-
-
-        std::this_thread::sleep_for(STATS_WRITE_PERIOD);
-    }
-}
-
-Connection &Server::addConnection(int socket, sockaddr_in address)
-{
-    std::unique_lock<std::mutex> lock{connectionsMutex};
-
-    connections.emplace_back(socket, address, *this);
-
-    Connection &connection = connections.back();
-    connection.start();
-
-    return connections.back();
-}
-
-size_t Server::filterConnections(std::function<bool(Connection &)> filter)
-{
-    std::unique_lock<std::mutex> lock{connectionsMutex};
-
-    size_t count{0};
-    auto connectionPtr = connections.begin();
-
-    while (connectionPtr != connections.end()) {
-        if (filter(*connectionPtr)) {
-
-            playersMutex.lock();
-            if (connectionPtr->isIdentified()) {
-                players.erase(connectionPtr->getNickname());
-            }
-            playersMutex.unlock();
-
-            connectionPtr = connections.erase(connectionPtr);
-            count++;
-        }
-        else {
-            connectionPtr++;
-        }
-    }
-
-    return count;
-}
-
-size_t Server::forEachConnection(std::function<void(Connection &)> function)
-{
-    std::unique_lock<std::mutex> lock{connectionsMutex};
-    size_t count{0};
-
-    for (auto &connection : connections) {
-        function(connection);
-        count++;
-    }
-
-    return count;
 }
 
 Stats &Server::getStats()
@@ -123,28 +46,226 @@ sockaddr_in &Server::getAddress()
     return address;
 }
 
-bool Server::stop(bool wait)
+Connection &Server::addConnection(int socket, sockaddr_in address)
 {
-    connectionAcceptor.stop(false);
-    connectionWatcher.stop(false);
-    shell.stop(false);
-    return Thread::stop(wait);
+    connectionsMutex.lock();
+
+    Uid uid = lastUid++;
+
+    auto connectionPtr = std::make_unique<Connection>(uid, socket, address, *this);
+    auto inserted = connections.insert(std::make_pair(uid, std::move(connectionPtr)));
+
+    connectionsMutex.unlock();
+
+    Connection &connection = (*inserted.first->second);
+    connection.start();
+
+    return connection;
+}
+
+size_t Server::clearClosedConnections()
+{
+    size_t count{0};
+
+    connectionsMutex.lock();
+
+    auto connectionsIt = connections.begin();
+    while (connectionsIt != connections.end()) {
+
+        if (connectionsIt->second->isClosed()) {
+            connectionsIt = connections.erase(connectionsIt);
+            count++;
+        }
+        else {
+            connectionsIt++;
+        }
+    }
+
+    connectionsMutex.unlock();
+
+    return count;
+}
+
+size_t Server::forEachConnection(std::function<void(Connection &)> function)
+{
+    size_t count{0};
+
+    connectionsMutex.lock();
+
+    for (auto &uidConnectionPair : connections) {
+        function(*uidConnectionPair.second);
+        count++;
+    }
+
+    connectionsMutex.unlock();
+
+    return count;
+}
+
+Game &Server::joinPublic(Connection &connection)
+{
+    Game *game;
+
+    publicGamesMutex.lock();
+
+    if (publicGames.back()->isNew()) {
+        game = publicGames.back().get();
+    }
+    else {
+        auto gamePtr = std::make_unique<Game>();
+        publicGames.push_back(std::move(gamePtr));
+        game = gamePtr.get();
+    }
+
+    game->addPlayer(connection);
+
+    publicGamesMutex.unlock();
+
+    return *game;
+}
+
+Game &Server::createPrivate(Connection &connection)
+{
+    privateGamesMutex.lock();
+
+    auto gamePtr = std::make_unique<Game>();
+    auto inserted = privateGames.insert(std::make_pair(connection.getNickname(), std::move(gamePtr)));
+
+    if (!inserted.second) {
+        throw ServerException("players " + connection.getNickname() + " private game already exists");
+    }
+
+    Game &game = *inserted.first->second;
+    game.addPlayer(connection);
+
+    privateGamesMutex.unlock();
+
+    return game;
+}
+
+Game &Server::joinPrivate(Connection &connection, std::string opponent)
+{
+    privateGamesMutex.lock();
+
+    auto found = privateGames.find(opponent);
+
+    if (found == privateGames.end()) {
+        throw ServerException("players " + opponent + " private game does not exist");
+    }
+
+    Game &game = *found->second;
+    game.addPlayer(connection);
+
+    privateGamesMutex.unlock();
+
+    return game;
+}
+
+size_t Server::clearEndedGames()
+{
+    size_t count{0};
+
+    publicGamesMutex.lock();
+
+    auto publicGamesIt = publicGames.begin();
+    while (publicGamesIt != publicGames.end()) {
+
+        if ((*publicGamesIt)->isEnded()) {
+            publicGamesIt = publicGames.erase(publicGamesIt);
+            count++;
+        }
+        else {
+            publicGamesIt++;
+        }
+    }
+
+    publicGamesMutex.unlock();
+
+    privateGamesMutex.lock();
+
+    auto privateGamesIt = privateGames.begin();
+    while (privateGamesIt != privateGames.end()) {
+
+        if (privateGamesIt->second->isEnded()) {
+            privateGamesIt = privateGames.erase(privateGamesIt);
+            count++;
+        }
+        else {
+            privateGamesIt++;
+        }
+    }
+
+    privateGamesMutex.unlock();
+
+    return count;
+}
+
+size_t Server::forEachPublicGame(std::function<void(Game &)> function)
+{
+    size_t count{0};
+
+    publicGamesMutex.lock();
+
+    for (auto &game : publicGames) {
+        function(*game);
+        count++;
+    }
+
+    publicGamesMutex.unlock();
+
+    return count;
+}
+
+size_t Server::forEachPrivateGame(std::function<void(Game &)> function)
+{
+    size_t count{0};
+
+    privateGamesMutex.lock();
+
+    for (auto &ownerGamePair : privateGames) {
+        function(*ownerGamePair.second);
+        count++;
+    }
+
+    privateGamesMutex.unlock();
+
+    return count;
 }
 
 void Server::before()
 {
-    logger.log("starting server");
+    logger.log("starting the server");
 
     connectionAcceptor.start();
-    connectionWatcher.start();
+
     shell.start();
+    shell.detach();
+}
+
+void Server::run()
+{
+    stats.setStarted(std::chrono::system_clock::now());
+
+    // periodically do a cleanup and write stats
+    while (!shouldStop()) {
+
+        if (stats.hasChanged()) {
+            logger.writeStats(stats);
+        }
+
+        clearClosedConnections();
+        clearEndedGames();
+
+        std::this_thread::sleep_for(RUN_LOOP_PERIOD);
+    }
 }
 
 void Server::after()
 {
     shell.stop(false);
     connectionAcceptor.stop(true);
-    connectionWatcher.stop(true);
+
+    logger.log("closing the connections");
 
     forEachConnection([](Connection &connection)
                       {
@@ -152,36 +273,16 @@ void Server::after()
                       });
 
 
-    logger.log("server stopped", Logger::Level::Warning);
+    logger.log("server stopped");
 }
 
-void Server::addPlayer(std::string nickname, Connection *connection)
-{
-    std::lock_guard<std::mutex> lock{playersMutex};
-
-    auto inserted = players.insert(std::make_pair(nickname, connection));
-
-    if (!inserted.second) {
-        throw ServerException("Player nickname already exists");
-    }
-}
-
-Connection &Server::getConnection(std::string nickname)
-{
-    auto found = players.find(nickname);
-
-    if (found == players.end()) {
-        throw ServerException("Player " + nickname + " does not exist");
-    }
-
-    return *found->second;
-}
 std::string Server::toLogString()
 {
     std::string string;
-    string += "Listening for the new connections on\n";
-    string += "IPv4 address: " + ipString + "\n";
-    string += "        port: " + std::to_string(port) + "\n";
+
+    string += "Listening on\n";
+    string += "  ip: " + ipString + "\n";
+    string += "port: " + std::to_string(port);
 
     return string;
 }

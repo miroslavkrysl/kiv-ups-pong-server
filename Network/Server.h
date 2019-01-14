@@ -8,32 +8,33 @@
 #include <functional>
 
 #include "ConnectionAcceptor.h"
-#include "ConnectionWatcher.h"
 #include "Connection.h"
 #include "../Utils/Logger.h"
 #include "../Utils/Shell.h"
 
 class Server: public Thread
 {
-    const std::chrono::seconds STATS_WRITE_PERIOD{3};
+    const std::chrono::seconds RUN_LOOP_PERIOD{3};
 
     Logger logger;
     Shell shell;
     Stats stats;
     ConnectionAcceptor connectionAcceptor;
-    ConnectionWatcher connectionWatcher;
 
     sockaddr_in address;
     std::string ipString;
     uint16_t port;
 
-    std::list<Connection> connections;
+    std::unordered_map<Uid, std::unique_ptr<Connection>> connections;
+    Uid lastUid;
     std::mutex connectionsMutex;
-    std::unordered_map<std::string, Connection *> players;
-    std::mutex playersMutex;
+
+    std::list<std::unique_ptr<Game>> publicGames;
+    std::unordered_map<std::string, std::unique_ptr<Game>> privateGames;
+    std::mutex publicGamesMutex;
+    std::mutex privateGamesMutex;
 
 public:
-
     explicit Server(uint16_t port, std::string ipAddress = "");
 
     Stats &getStats();
@@ -41,15 +42,19 @@ public:
     sockaddr_in &getAddress();
 
     Connection &addConnection(int socket, sockaddr_in address);
-    size_t filterConnections(std::function<bool(Connection&)> filter);
-    size_t forEachConnection(std::function<void(Connection&)> function);
+    size_t clearClosedConnections();
+    size_t forEachConnection(std::function<void(Connection &)> function);
 
-    void addPlayer(std::string nickname, Connection *connection);
-    Connection &getConnection(std::string nickname);
+    Game &joinPublic(Connection &connection);
+    Game &createPrivate(Connection &connection);
+    Game &joinPrivate(Connection &connection, std::string opponent);
+    size_t clearEndedGames();
+    size_t forEachPublicGame(std::function<void(Game &)> function);
+    size_t forEachPrivateGame(std::function<void(Game &)> function);
 
+    void before() override;
     void run() override;
     bool stop(bool wait) override;
-    void before() override;
     void after() override;
 
     std::string toLogString();
@@ -59,5 +64,3 @@ class ServerException: public std::runtime_error
 {
     using std::runtime_error::runtime_error;
 };
-
-

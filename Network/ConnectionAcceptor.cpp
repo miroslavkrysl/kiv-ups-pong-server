@@ -1,7 +1,7 @@
-#include <cstring>
-#include <zconf.h>
-#include <iostream>
 #include <arpa/inet.h>
+#include <unistd.h>
+
+#include <cstring>
 
 #include "ConnectionAcceptor.h"
 #include "Server.h"
@@ -11,42 +11,6 @@ ConnectionAcceptor::ConnectionAcceptor(Server &server)
       serverSocket(-1)
 {}
 
-void ConnectionAcceptor::run()
-{
-    server.getLogger().log("connection acceptor running");
-
-    // loop for accepting new connections
-    while (!shouldStop()) {
-        sockaddr_in clientAddress{};
-        socklen_t addressSize = sizeof(in_addr_t);
-
-        int clientSocket = ::accept(serverSocket, reinterpret_cast<sockaddr *>(&clientAddress), &addressSize);
-
-        if (clientSocket == -1) {
-
-            if (errno == EBADF || errno == EINVAL) {
-                // socket closed
-                break;
-            }
-
-            server.getLogger()
-                .log("ERROR: error while accepting the connection: " + std::string{strerror(errno)}, Logger::Level::Error);
-            return;
-        }
-
-        // handle the new connection
-        Connection &connection = server.addConnection(clientSocket, clientAddress);
-
-        server.getLogger().log("accepted new connection: " + connection.getId());
-    }
-}
-
-bool ConnectionAcceptor::stop(bool wait)
-{
-    ::shutdown(serverSocket, SHUT_RDWR);
-    return Thread::stop(wait);
-}
-
 void ConnectionAcceptor::before()
 {
     int returnValue;
@@ -55,8 +19,8 @@ void ConnectionAcceptor::before()
     serverSocket = ::socket(AF_INET, SOCK_STREAM, 0);
 
     if (serverSocket == -1) {
-        std::string message = "cannot create a socket for listening" + std::string{strerror(errno)};
-        server.getLogger().log("ERROR: " + message, Logger::Level::Error);
+        std::string message = "cannot create a socket for listening: " + std::string{strerror(errno)};
+        server.getLogger().log(message, Logger::Level::Error);
         throw ServerException(message);
     }
 
@@ -69,8 +33,8 @@ void ConnectionAcceptor::before()
                              sizeof(parameter));
 
     if (returnValue == -1) {
-        std::string message = "error while setting the socket options" + std::string{strerror(errno)};
-            server.getLogger().log("ERROR: " + message, Logger::Level::Error);
+        std::string message = "error while setting the socket option: " + std::string{strerror(errno)};
+        server.getLogger().log(message, Logger::Level::Error);
         throw ServerException(message);
     }
 
@@ -79,7 +43,7 @@ void ConnectionAcceptor::before()
 
     if (returnValue != 0) {
         std::string message = "error while binding the server address to the socket: " + std::string{strerror(errno)};
-        server.getLogger().log("ERROR: " + message, Logger::Level::Error);
+        server.getLogger().log(message, Logger::Level::Error);
         throw ServerException(message);
     }
 
@@ -88,14 +52,54 @@ void ConnectionAcceptor::before()
 
     if (returnValue != 0) {
         std::string message = "error while starting to listen on the socket: " + std::string{strerror(errno)};
-        server.getLogger().log("ERROR: " + message, Logger::Level::Error);
+        server.getLogger().log(message, Logger::Level::Error);
         throw ServerException(message);
     }
+}
+
+void ConnectionAcceptor::run()
+{
+    server.getLogger().log("connection acceptor running");
+
+    // loop for accepting the new connections
+    while (!shouldStop()) {
+        sockaddr_in clientAddress{};
+        socklen_t addressSize = sizeof(in_addr_t);
+
+        // accept new connection
+        int clientSocket = ::accept(serverSocket, reinterpret_cast<sockaddr *>(&clientAddress), &addressSize);
+
+        if (clientSocket == -1) {
+            // an error occurred
+
+            if (errno == EBADF || errno == EINVAL) {
+                // socket closed
+                break;
+            }
+
+            server.getLogger()
+                .log("error while accepting the connection: " + std::string{strerror(errno)}, Logger::Level::Error);
+            return;
+        }
+
+        // handle the new connection
+        Connection &connection = server.addConnection(clientSocket, clientAddress);
+
+        server.getLogger()
+            .log("accepted new connection uid=" + std::to_string(connection.getUid()) + " ip=" + connection.getIp());
+    }
+}
+
+bool ConnectionAcceptor::stop(bool wait)
+{
+    // shutdown the server socket to break the blocking accept() call
+    ::shutdown(serverSocket, SHUT_RDWR);
+    return Thread::stop(wait);
 }
 
 void ConnectionAcceptor::after()
 {
     ::close(serverSocket);
     serverSocket = -1;
-    server.getLogger().log("connection acceptor stopped", Logger::Level::Warning);
+    server.getLogger().log("connection acceptor stopped");
 }
