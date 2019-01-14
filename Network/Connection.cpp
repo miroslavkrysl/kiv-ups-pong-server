@@ -55,6 +55,7 @@ void Connection::run()
                 // send poke packet
                 Packet pokePacket("poke");
                 send(pokePacket);
+                continue;
             }
             else if (errno == EBADF || errno == EINVAL) {
                 // socket shut down
