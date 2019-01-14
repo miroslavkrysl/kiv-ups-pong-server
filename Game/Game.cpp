@@ -9,19 +9,6 @@ Game::Game(std::string playerLeft, std::string playerRight)
     if (playerLeft == playerRight) {
         throw GameException("players must have distinct nicknames");
     }
-
-    stateMachine.addState(GameState::NewRound);
-    stateMachine.addState(GameState::BallReady);
-    stateMachine.addState(GameState::BallToLeft);
-    stateMachine.addState(GameState::BallToRight);
-
-    stateMachine.addTransition(GameState::NewRound, GameState::BallReady, GameEvent::NewBall);
-    stateMachine.addTransition(GameState::BallReady, GameState::BallToLeft, GameEvent::BallStartLeft);
-    stateMachine.addTransition(GameState::BallReady, GameState::BallToRight, GameEvent::BallStartRight);
-    stateMachine.addTransition(GameState::BallToLeft, GameState::BallToRight, GameEvent::BallHitLeft);
-    stateMachine.addTransition(GameState::BallToRight, GameState::BallToLeft, GameEvent::BallHitRight);
-    stateMachine.addTransition(GameState::BallToLeft, GameState::NewRound, GameEvent::BallMissLeft);
-    stateMachine.addTransition(GameState::BallToRight, GameState::NewRound, GameEvent::BallMissRight);
 }
 
 PlayerState &Game::getPlayerState_(std::string nickname)
@@ -36,12 +23,12 @@ PlayerState &Game::getPlayerState_(std::string nickname)
     throw GameException("No such player: " + nickname);
 }
 
-const PlayerState &Game::getPlayerState(std::string nickname)
+PlayerState Game::getPlayerState(std::string nickname)
 {
     return getPlayerState_(std::move(nickname));
 }
 
-const PlayerState &Game::getOpponentState(std::string nickname)
+PlayerState Game::getOpponentState(std::string nickname)
 {
     if (nickname == nicknames.first) {
         return getPlayerState_(nicknames.second);
@@ -53,9 +40,10 @@ const PlayerState &Game::getOpponentState(std::string nickname)
     throw GameException("No such player: " + nickname);
 }
 
-const BallState &Game::getBallState()
+BallState Game::getBallState()
 {
-    return ball;
+    std::lock_guard<std::mutex> lock{mutex};
+    return ballState;
 }
 
 Side Game::getPlayerSide(std::string nickname)
@@ -83,21 +71,47 @@ void Game::updatePlayerState(std::string nickname, PlayerState state)
     PlayerState &oldState = getPlayerState_(std::move(nickname));
     PlayerState expected = expectedPlayerState(oldState, state.timestamp());
 
+    if (!isInPast(state.timestamp())) {
+        throw GamePlayException("can not set future player state");
+    }
+
     if (state.position() != expected.position()) {
-        throw GamePlayException("new player state does not correspond with the expected!");
+        throw GamePlayException("new player state does not correspond with the expected");
     }
 
     oldState = state;
 }
 
-void Game::ballHit(std::string nickname, PlayerState state, BallState ballState)
+void Game::ballHit(std::string nickname, BallState ballState)
 {
-    // TODO: do hit event
-}
+    std::lock_guard<std::mutex> lock{mutex};
 
-void Game::ballMiss(std::string nickname, PlayerState state)
-{
-    // TODO: do miss event
+    BallState ballStateExpected = expectedBallState(ballState);
+    Side playerSide = getPlayerSide(nickname);
+
+    if (ballState.position() != ballStateExpected.position()
+        || ballState.timestamp() != ballStateExpected.timestamp()) {
+        throw GamePlayException("new ball state does not correspond with the expected");
+    }
+
+    if (canHit(nickname, ballState)) {
+        if (playerSide == Side::Left) {
+            stateMachine.doTransition(GameEvent::HitLeft);
+        }
+        else {
+            stateMachine.doTransition(GameEvent::HitRight);
+        }
+    }
+    else {
+        if (playerSide == Side::Left) {
+            stateMachine.doTransition(GameEvent::MissLeft);
+        }
+        else {
+            stateMachine.doTransition(GameEvent::MissRight);
+        }
+    }
+
+    this->ballState = ballState;
 }
 
 bool Game::isInPast(Timestamp time)
@@ -111,12 +125,14 @@ PlayerState Game::expectedPlayerState(PlayerState &state, Timestamp timestamp)
         throw GameException("player state timestamp is in future");
     }
 
-    if (state.direction() == PlayerDirection::Stop) {
-        return {timestamp, state.position(), state.direction()};
-    }
-
     double seconds = (timestamp - state.timestamp()) / 1000.0;
-    int dir = state.direction() == PlayerDirection::Up ? 1 : -1;
+
+    int dir;
+    switch (state.direction()) {
+    case PlayerDirection::Up: dir = 1; break;
+    case PlayerDirection::Stop: dir = 0; break;
+    case PlayerDirection::Down: dir = -1; break;
+    }
 
     long position = static_cast<long>(state.position() + (dir * PLAYER_SPEED * seconds));
 
@@ -132,8 +148,13 @@ PlayerState Game::expectedPlayerState(PlayerState &state, Timestamp timestamp)
 
 BallState Game::expectedBallState(BallState &state)
 {
+    std::lock_guard<std::mutex> lock{mutex};
+
     double radians = M_PI / 180 * state.direction();
-    double width = (GAME_WIDTH - 2 * BALL_RADIUS);
+    double width =
+        getState() == GameState::StartLeft || getState() == GameState::StartRight
+        ? (GAME_WIDTH / 2 - BALL_RADIUS)
+        : (GAME_WIDTH - 2 * BALL_RADIUS);
     long height = (GAME_HEIGHT - 2 * BALL_RADIUS);
 
     double hypotenuse = width / std::cos(std::abs(radians));
@@ -149,7 +170,38 @@ BallState Game::expectedBallState(BallState &state)
 
     position += state.position();
 
-    Side side = state.side() == Side::Left ? Side::Right : Side::Left;
+    return {static_cast<Timestamp>(timestamp), static_cast<BallPosition>(position), state.direction(), state.speed()};
+}
 
-    return {static_cast<Timestamp>(timestamp), side, static_cast<BallPosition>(position), state.direction(), state.speed()};
+bool Game::canHit(std::string nickname, BallState &ballState)
+{
+    Side playerSide = getPlayerSide(nickname);
+    PlayerState &playerState = getPlayerState_(nickname);
+
+    return ballState.position() <= playerState.position() + (PLAYER_HEIGHT / 2)
+    && ballState.position() >= playerState.position() - (PLAYER_HEIGHT / 2);
+
+}
+
+void Game::newBall()
+{
+    ballState = BallState{getTime(), 0, 0, 0};
+    stateMachine.doTransition(GameEvent::NewBall);
+}
+
+void Game::releaseBall(Side side)
+{
+    ballState = BallState{getTime(), 0, 0, BALL_SPEED_MIN};
+
+    if (side == Side::Left){
+        stateMachine.doTransition(GameEvent::ReleaseLeft);
+    }
+    else {
+        stateMachine.doTransition(GameEvent::ReleaseRight);
+    }
+}
+
+GameState Game::getState()
+{
+    return stateMachine.getCurrentState();
 }

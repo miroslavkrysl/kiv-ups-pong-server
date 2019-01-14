@@ -198,7 +198,6 @@ std::string sideToStr(Side playerSide)
 {
     switch (playerSide) {
     case Side::Left:return "left";
-    case Side::Center:return "center";
     case Side::Right:return "right";
     }
 }

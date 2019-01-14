@@ -3,6 +3,7 @@
 #include <array>
 #include <chrono>
 #include <stdexcept>
+#include <mutex>
 
 #include "BallState.h"
 #include "PlayerState.h"
@@ -11,31 +12,35 @@
 class Game
 {
     GameStateMachine stateMachine;
-    BallState ball;
+    BallState ballState;
     PlayerState playerLeft;
     PlayerState playerRight;
     std::pair<std::string, std::string> nicknames;
     std::pair<Score, Score> score;
 
     const std::chrono::steady_clock::time_point startTime;
+    std::mutex mutex;
 
     PlayerState &getPlayerState_(std::string nickname);
 
     PlayerState expectedPlayerState(PlayerState &state, Timestamp timestamp);
     BallState expectedBallState(BallState &state);
+    bool canHit(std::string nickname, BallState &state);
 
 public:
     Game(std::string playerLeft, std::string playerRight);
 
-    const PlayerState &getPlayerState(std::string nickname);
-    const PlayerState &getOpponentState(std::string nickname);
-    const BallState &getBallState();
+    PlayerState getPlayerState(std::string nickname);
+    PlayerState getOpponentState(std::string nickname);
+    BallState getBallState();
     Side getPlayerSide(std::string nickname);
     Timestamp getTime();
+    GameState getState();
 
+    void newBall();
+    void releaseBall(Side side);
     void updatePlayerState(std::string nickname, PlayerState state);
-    void ballHit(std::string nickname, PlayerState state, BallState ballState);
-    void ballMiss(std::string nickname, PlayerState state);
+    void ballHit(std::string nickname, BallState ballState);
 
     bool isInPast(Timestamp timestamp);
 };

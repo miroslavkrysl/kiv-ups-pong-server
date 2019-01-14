@@ -6,7 +6,6 @@
 
 enum class Side {
     Left,
-    Center,
     Right,
 };
 

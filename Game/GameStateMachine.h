@@ -4,19 +4,21 @@
 
 enum class GameState {
     NewRound,
-    BallReady,
-    BallToLeft,
-    BallToRight,
+    Ready,
+    StartLeft,
+    StartRight,
+    ToLeft,
+    ToRight,
 };
 
 enum class GameEvent {
     NewBall,
-    BallHitLeft,
-    BallHitRight,
-    BallMissLeft,
-    BallMissRight,
-    BallStartLeft,
-    BallStartRight,
+    HitLeft,
+    HitRight,
+    MissLeft,
+    MissRight,
+    ReleaseLeft,
+    ReleaseRight,
 };
 
 class GameStateMachine
@@ -24,6 +26,7 @@ class GameStateMachine
     StateMachine stateMachine;
 
 public:
+    GameStateMachine();
     void addState(GameState state);
     void addTransition(GameState startState, GameState endState, GameEvent input);
     void setCurrentState(GameState state);
