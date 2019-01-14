@@ -133,13 +133,21 @@ PlayerState Game::expectedPlayerState(PlayerState &state, Timestamp timestamp)
 BallState Game::expectedBallState(BallState &state)
 {
     double radians = M_PI / 180 * state.direction();
+    double width = (GAME_WIDTH - 2 * BALL_RADIUS);
+    long height = (GAME_HEIGHT - 2 * BALL_RADIUS);
 
-    // TODO: compute ball position position
+    double hypotenuse = width / std::cos(std::abs(radians));
+    long hLeg = static_cast<long>(std::tan(radians) * width);
 
-    double distance = (GAME_WIDTH - 2 * BALL_RADIUS) / std::cos(std::abs(radians));
-
-    double timestamp = distance / (state.speed() / 1000.0);
+    double timestamp = hypotenuse / (state.speed() / 1000.0);
     timestamp += state.timestamp();
+
+    long position = hLeg % height;
+    if ((position / height) % 2 == 0) {
+        position *= -1;
+    }
+
+    position += state.position();
 
     Side side = state.side() == Side::Left ? Side::Right : Side::Left;
 
