@@ -25,6 +25,7 @@ class Shell: public Thread
         {"games", &Shell::cmdGames},
         {"players", &Shell::cmdPlayers},
         {"info", &Shell::cmdInfo},
+        {"stats", &Shell::cmdStats},
         {"help", &Shell::cmdHelp},
     };
 
@@ -34,6 +35,7 @@ class Shell: public Thread
     void cmdGames(std::vector<std::string> arguments);
     void cmdPlayers(std::vector<std::string> arguments);
     void cmdInfo(std::vector<std::string> arguments);
+    void cmdStats(std::vector<std::string> arguments);
     void cmdHelp(std::vector<std::string> arguments);
 
 public:

@@ -86,8 +86,7 @@ void Shell::cmdPlayers(std::vector<std::string> arguments)
     output << HLINE << std::endl;
 
     size_t count = server.forEachConnection([&output](Connection &connection){
-        // TODO: print players
-        output << "player" << std::endl;
+        output << "- " <<connection.getId() << std::endl;
     });
 
     if (count == 0) {
@@ -98,6 +97,13 @@ void Shell::cmdPlayers(std::vector<std::string> arguments)
 }
 
 void Shell::cmdInfo(std::vector<std::string> arguments)
+{
+    output << HLINE << std::endl;
+    output << server.toLogString();
+    output << HLINE << std::endl;
+}
+
+void Shell::cmdStats(std::vector<std::string> arguments)
 {
     output << HLINE << std::endl;
     output << server.getStats().toLogString();

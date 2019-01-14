@@ -4,6 +4,7 @@
 #include <thread>
 #include <cstring>
 #include <regex>
+#include <iostream>
 
 #include "Connection.h"
 #include "Packet.h"
@@ -76,27 +77,36 @@ void Connection::run()
         }
 
         lastRecvAt = std::chrono::steady_clock::now();
-        server.getStats().addBytesReceived(bytesRead);
+        server.getStats().addBytesReceived(static_cast<uint64_t>(bytesRead));
 
         // process the received data
         for (int i = 0; i < bytesRead; ++i) {
-            data += buffer[i];
+            bool endMessage{false};
+
+            for (int j = 0; j < Packet::TERMINATOR.size() - 1; ++j) {
+                if (buffer[i + j] != Packet::TERMINATOR[j]) {
+                    endMessage = false;
+                    break;
+                }
+                endMessage = true;
+            }
 
             // search for the termination symbol
-            if (buffer[i] == Packet::TERMINATOR) {
-                // if find, the whole message was received
+            if (endMessage) {
+                // if found, the whole message was received
+
+                //skip termination symbols
+                i += Packet::TERMINATOR.size() - 1;
 
                 try {
                     Packet packet;
                     packet.parse(data);
+
+                    server.getLogger().logCommunication(packet, true, getId());
                     handlePacket(packet);
 
                     corruptedPackets = 0;
-
                     server.getStats().addPacketsReceived(1);
-
-                    server.getLogger()
-                        .logCommunication(packet, true, getId());
                 }
                 catch (PacketException &exception) {
                     server.getStats().addPacketsDropped(1);
@@ -111,6 +121,9 @@ void Connection::run()
                 }
 
                 data.clear();
+            }
+            else {
+                data += buffer[i];
             }
         }
 
@@ -142,7 +155,8 @@ void Connection::send(Packet &packet)
 
         if (sentBytes >= 0) {
             server.getStats().addPacketsSent(1);
-            server.getStats().addBytesSent(sentBytes);
+            server.getStats().addBytesSent(static_cast<uint64_t>(sentBytes));
+            server.getLogger().logCommunication(packet, false, getId());
             break;
         }
 
@@ -182,7 +196,7 @@ bool Connection::isIdentified()
 
 std::string Connection::getId()
 {
-    return ipString;
+    return nickname.empty() ? ipString : nickname;
 }
 
 void Connection::setMode(Connection::Mode mode)
@@ -233,7 +247,7 @@ void Connection::handlePacket(Packet packet)
     auto typeHandler = handlers.find(packet.getType());
 
     if (typeHandler == handlers.end()) {
-        throw ConnectionException("unknown packet type");
+        throw UnknownPacketException("unknown packet type: [" + packet.getType() + "]");
     }
 
     Handler handler = typeHandler->second;
@@ -250,7 +264,7 @@ void Connection::handleLogin(Packet packet)
     auto items = packet.getItems();
 
     if (items.size() != 1 ) {
-        throw MalformedPacketException{""};
+        throw MalformedPacketException{"login packet must have only 1 argument: nickname"};
     }
 
     std::regex nicknameRegex("[a-zA-Z0-9]{3,16}");
@@ -391,4 +405,12 @@ void Connection::handlePoke(Packet packet)
     Packet response{"poke_back"};
     send(response);
 }
+
+std::string Connection::getNickname()
+{
+    return nickname;
+}
+
+void Connection::handlePokeBack(Packet packet)
+{}
 

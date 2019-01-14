@@ -4,13 +4,13 @@
 #include <vector>
 #include <list>
 #include <stdexcept>
-#include "../Utils/Serializable.h"
+#include <array>
 
-class Packet: public Serializable
+class Packet
 {
 public:
     static const char DELIMITER{';'};
-    static const char TERMINATOR{'\n'};
+    static const std::array<char, 3> TERMINATOR;
     static const size_t MAX_SIZE{1024};
 
 private:
@@ -21,9 +21,10 @@ public:
     explicit Packet(std::string type = "");
     explicit Packet(std::string type, std::list<std::string> items);
 
-    void parse(std::string contents) override;
-    std::string serialize() override;
-    void clear() override;
+    void parse(std::string contents);
+    std::string serialize();
+    std::string toLogString();
+    void clear();
 
     void addItem(std::string item);
 

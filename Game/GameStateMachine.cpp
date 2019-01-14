@@ -35,7 +35,7 @@ void GameStateMachine::addState(GameState state)
 
 void GameStateMachine::addTransition(GameState startState, GameState endState, GameEvent input)
 {
-    stateMachine.addTransition(static_cast<int>(startState), static_cast<int>(endState), static_cast<int>(input))
+    stateMachine.addTransition(static_cast<int>(startState), static_cast<int>(endState), static_cast<int>(input));
 }
 
 void GameStateMachine::setCurrentState(GameState state)

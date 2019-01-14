@@ -8,6 +8,8 @@
 
 #include "Packet.h"
 
+constexpr std::array<char, 3> Packet::TERMINATOR = {"\r\n"};
+
 Packet::Packet(std::string type)
     : type{std::move(type)}
 {}
@@ -19,11 +21,6 @@ Packet::Packet(std::string type, std::list<std::string> items)
 
 void Packet::parse(std::string contents)
 {
-    // remove termination character
-    if (contents.back() == TERMINATOR) {
-        contents.pop_back();
-    }
-
     // tokenize by delimiter
     std::list<std::string> tokens;
     std::stringstream ss{contents};
@@ -34,12 +31,12 @@ void Packet::parse(std::string contents)
         tokens.push_back(token);
     }
 
+    // erase existing items and fill with parsed
+    clear();
+
     // first token is token type name
     type = tokens.front();
     tokens.pop_front();
-
-    // erase existing items and fill with parsed
-    clear();
 
     for (auto &token : tokens) {
         addItem(token);
@@ -57,10 +54,24 @@ std::string Packet::serialize()
         serialized += item;
     }
 
-    serialized += TERMINATOR;
+    serialized += TERMINATOR.data();
 
     if (serialized.size() >= MAX_SIZE) {
         throw PacketException("packet length exceeded");
+    }
+
+    return serialized;
+}
+
+std::string Packet::toLogString()
+{
+    std::string serialized;
+
+    serialized += type;
+
+    for (auto &item : items) {
+        serialized += DELIMITER;
+        serialized += item;
     }
 
     return serialized;

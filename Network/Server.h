@@ -24,6 +24,8 @@ class Server: public Thread
     ConnectionWatcher connectionWatcher;
 
     sockaddr_in address;
+    std::string ipString;
+    uint16_t port;
 
     std::list<Connection> connections;
     std::mutex connectionsMutex;
@@ -49,6 +51,8 @@ public:
     bool stop(bool wait) override;
     void before() override;
     void after() override;
+
+    std::string toLogString();
 };
 
 class ServerException: public std::runtime_error

@@ -14,6 +14,7 @@
 Server::Server(uint16_t port, std::string ipAddress)
     : connectionAcceptor{*this},
       connectionWatcher{*this},
+      port{port},
       logger{"server.log", "communication.log", "stats.log"},
       shell{std::cin, std::cout, *this}
 {
@@ -32,6 +33,11 @@ Server::Server(uint16_t port, std::string ipAddress)
             throw ServerException("server ip address is in wrong format");
         }
     }
+
+    char ipString[INET_ADDRSTRLEN];
+    ::inet_ntop(AF_INET, &(address.sin_addr), ipString, INET_ADDRSTRLEN);
+
+    this->ipString = ipString;
 }
 
 void Server::run()
@@ -169,4 +175,13 @@ Connection &Server::getConnection(std::string nickname)
     }
 
     return *found->second;
+}
+std::string Server::toLogString()
+{
+    std::string string;
+    string += "Listening for the new connections on\n";
+    string += "IPv4 address: " + ipString + "\n";
+    string += "        port: " + std::to_string(port) + "\n";
+
+    return string;
 }

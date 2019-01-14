@@ -35,7 +35,7 @@ private:
     const int CORRUPTED_PACKETS_LIMIT{5};
     const std::chrono::seconds INACTIVE_TIMEOUT_IDLE{60};
     const std::chrono::seconds INACTIVE_TIMEOUT_BUSY{10};
-    const timeval RECV_TIMEOUT_IDLE{30, 0};
+    const timeval RECV_TIMEOUT_IDLE{20, 0};
     const timeval RECV_TIMEOUT_BUSY{2, 0};
     const timeval SEND_TIMEOUT_IDLE{5, 0};
     const timeval SEND_TIMEOUT_BUSY{1, 0};
@@ -53,6 +53,7 @@ private:
         {"ball_hit", &Connection::handleBallHit},
         {"leave_game", &Connection::handleLeaveGame},
         {"poke", &Connection::handlePoke},
+        {"poke_back", &Connection::handlePokeBack},
     };
 
     void setMode(Mode mode);
@@ -65,6 +66,7 @@ private:
     void handleBallHit(Packet packet);
     void handleLeaveGame(Packet packet);
     void handlePoke(Packet packet);
+    void handlePokeBack(Packet packet);
 
 public:
     Connection(int socket, sockaddr_in address, Server &server);
@@ -74,6 +76,7 @@ public:
     bool isClosed();
     bool isIdentified();
     std::string getId();
+    std::string getNickname();
 
     void run() override;
     bool stop(bool wait) override;
@@ -84,6 +87,11 @@ public:
 class ConnectionException: public std::runtime_error
 {
     using std::runtime_error::runtime_error;
+};
+
+class UnknownPacketException: public PacketException
+{
+    using PacketException::PacketException;
 };
 
 class NonContextualPacketException: public PacketException

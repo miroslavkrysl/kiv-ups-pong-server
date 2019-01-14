@@ -49,19 +49,19 @@ void Logger::log(const std::string &message, Level level)
 
 void Logger::logCommunication(Packet &packet, bool incoming, std::string id)
 {
-    std::string serialized;
+    std::ostringstream serialized;
+    std::string serializedPacket = packet.toLogString();
 
     if (incoming) {
-        std::cout << Decor{Decor::FG_GREEN} << "<- " << id << ": " << serialized << Decor{Decor::FG_DEFAULT}
-                  << std::endl;
+        serialized << Decor{Decor::FG_BLUE} << "<- " << id << ": " << serializedPacket << Decor{Decor::FG_DEFAULT};
     }
     else {
-        std::cout << Decor{Decor::FG_MAGENTA} << "-> " << id << ": " << serialized << Decor{Decor::FG_DEFAULT}
-                  << std::endl;
+        serialized << Decor{Decor::FG_MAGENTA} << "-> " << id << ": " << serializedPacket << Decor{Decor::FG_DEFAULT};
     }
 
     std::lock_guard<std::mutex> lock{communicationLogMutex};
-    communicationLogFile << serialized << std::endl;
+    std::cout << serialized.str() << std::endl;
+    communicationLogFile << serialized.str() << std::endl;
 }
 
 void Logger::writeStats(Stats &stats)
