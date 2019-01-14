@@ -18,8 +18,10 @@ class Game
     PlayerState playerLeft;
     PlayerState playerRight;
     Score maxScore;
+    Side nextSide;
     std::pair<std::string, std::string> nicknames;
     std::pair<Score, Score> score;
+    std::pair<bool, bool> ready;
 
     const std::chrono::steady_clock::time_point startTime;
     std::mutex mutex;
@@ -41,8 +43,8 @@ public:
     Timestamp getTime();
     GameState getState();
 
-    void newBall();
-    void releaseBall(Side side);
+    void newRound();
+    void playerReady(const std::string &nickname);
     void updatePlayerState(std::string nickname, PlayerState state);
     void ballHit(std::string nickname, BallState ballState);
 

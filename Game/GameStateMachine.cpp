@@ -3,18 +3,16 @@
 GameStateMachine::GameStateMachine()
 {
     addState(GameState::NewRound);
-    addState(GameState::Ready);
     addState(GameState::StartLeft);
     addState(GameState::StartRight);
     addState(GameState::ToLeft);
     addState(GameState::ToRight);
     addState(GameState::End);
 
-    addTransition(GameState::NewRound, GameState::Ready, GameEvent::NewBall);
-    addTransition(GameState::Ready, GameState::StartLeft, GameEvent::ReleaseLeft);
-    addTransition(GameState::Ready, GameState::StartRight, GameEvent::ReleaseRight);
-    addTransition(GameState::StartLeft, GameState::Ready, GameEvent::NewBall);
-    addTransition(GameState::StartRight, GameState::Ready, GameEvent::NewBall);
+    addTransition(GameState::NewRound, GameState::StartLeft, GameEvent::ReleaseLeft);
+    addTransition(GameState::NewRound, GameState::StartRight, GameEvent::ReleaseRight);
+    addTransition(GameState::StartLeft, GameState::NewRound, GameEvent::NewRound);
+    addTransition(GameState::StartRight, GameState::NewRound, GameEvent::NewRound);
     addTransition(GameState::StartLeft, GameState::ToRight, GameEvent::HitLeft);
     addTransition(GameState::StartRight, GameState::ToLeft, GameEvent::HitRight);
     addTransition(GameState::StartLeft, GameState::NewRound, GameEvent::MissLeft);
@@ -23,8 +21,8 @@ GameStateMachine::GameStateMachine()
     addTransition(GameState::ToRight, GameState::ToLeft, GameEvent::HitRight);
     addTransition(GameState::ToLeft, GameState::NewRound, GameEvent::MissLeft);
     addTransition(GameState::ToRight, GameState::NewRound, GameEvent::MissRight);
-    addTransition(GameState::ToLeft, GameState::Ready, GameEvent::NewBall);
-    addTransition(GameState::ToRight, GameState::Ready, GameEvent::NewBall);
+    addTransition(GameState::ToLeft, GameState::NewRound, GameEvent::NewRound);
+    addTransition(GameState::ToRight, GameState::NewRound, GameEvent::NewRound);
     addTransition(GameState::NewRound, GameState::End, GameEvent::EndGame);
 
     setCurrentState(GameState::NewRound);

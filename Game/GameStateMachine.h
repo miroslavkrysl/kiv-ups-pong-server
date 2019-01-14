@@ -4,7 +4,6 @@
 
 enum class GameState {
     NewRound,
-    Ready,
     StartLeft,
     StartRight,
     ToLeft,
@@ -13,7 +12,6 @@ enum class GameState {
 };
 
 enum class GameEvent {
-    NewBall,
     HitLeft,
     HitRight,
     MissLeft,
@@ -21,6 +19,7 @@ enum class GameEvent {
     ReleaseLeft,
     ReleaseRight,
     EndGame,
+    NewRound,
 };
 
 class GameStateMachine

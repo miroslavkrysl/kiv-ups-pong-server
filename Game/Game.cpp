@@ -7,7 +7,9 @@
 
 Game::Game(std::string playerLeft, std::string playerRight)
     : nicknames{playerLeft, playerRight},
-      score{0, 0}
+      score{0, 0},
+      nextSide{Side::Right},
+      ready{false, false}
 {
     if (playerLeft == playerRight) {
         throw GameException("players must have distinct nicknames");
@@ -38,7 +40,6 @@ PlayerState Game::getOpponentState(std::string nickname)
 
 BallState Game::getBallState()
 {
-    std::lock_guard<std::mutex> lock{mutex};
     return ballState;
 }
 
@@ -80,8 +81,6 @@ void Game::updatePlayerState(std::string nickname, PlayerState state)
 
 void Game::ballHit(std::string nickname, BallState ballState)
 {
-    std::lock_guard<std::mutex> lock{mutex};
-
     BallState ballStateExpected = expectedBallState(ballState);
     Side playerSide = getPlayerSide(nickname);
 
@@ -154,8 +153,6 @@ PlayerState Game::expectedPlayerState(PlayerState &state, Timestamp timestamp)
 
 BallState Game::expectedBallState(BallState &state)
 {
-    std::lock_guard<std::mutex> lock{mutex};
-
     double radians = M_PI / 180 * state.direction();
     double width =
         getState() == GameState::StartLeft || getState() == GameState::StartRight
@@ -188,21 +185,35 @@ bool Game::canHit(std::string nickname, BallState &ballState)
 
 }
 
-void Game::newBall()
+void Game::newRound()
 {
     ballState = BallState{getTime(), 0, 0, 0};
-    stateMachine.doTransition(GameEvent::NewBall);
+    ready.first = false;
+    ready.first = false;
+    stateMachine.doTransition(GameEvent::NewRound);
 }
 
-void Game::releaseBall(Side side)
+void Game::playerReady(const std::string &nickname)
 {
-    ballState = BallState{getTime(), 0, 0, BALL_SPEED_MIN};
-
-    if (side == Side::Left){
-        stateMachine.doTransition(GameEvent::ReleaseLeft);
+    if (nickname == nicknames.first) {
+        ready.first = true;
+    }
+    else if (nickname == nicknames.second) {
+        ready.second = true;
     }
     else {
-        stateMachine.doTransition(GameEvent::ReleaseRight);
+        throw GameException("No such player: " + nickname);
+    }
+
+    if (ready.first && ready.second) {
+        ballState = BallState{getTime() + START_DELAY, 0, 0, BALL_SPEED_MIN};
+
+        if (nextSide == Side::Left){
+            stateMachine.doTransition(GameEvent::ReleaseLeft);
+        }
+        else {
+            stateMachine.doTransition(GameEvent::ReleaseRight);
+        }
     }
 }
 

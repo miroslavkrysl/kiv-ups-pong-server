@@ -24,6 +24,8 @@ typedef uint8_t Score;
 typedef uint16_t Speed;
 typedef int8_t BallDirection;
 
+const Timestamp START_DELAY{3000};
+
 const Size GAME_WIDTH{1920};
 const Size GAME_HEIGHT{1080};
 
