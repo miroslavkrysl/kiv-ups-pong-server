@@ -1,3 +1,5 @@
+#include <cmath>
+#include <CLucene/util/CLStreams.h>
 #include "Game.h"
 
 Game::Game(std::string playerLeft, std::string playerRight)
@@ -22,47 +24,47 @@ Game::Game(std::string playerLeft, std::string playerRight)
     stateMachine.addTransition(GameState::BallToRight, GameState::NewRound, GameEvent::BallMissRight);
 }
 
-PlayerState *Game::getPlayerStatePtr(std::string nickname)
+PlayerState &Game::getPlayerState_(std::string nickname)
 {
     if (nickname == nicknames.first) {
-        return &playerLeft;
+        return playerLeft;
     }
     else if (nickname == nicknames.second) {
-        return &playerRight;
+        return playerRight;
     }
 
     throw GameException("No such player: " + nickname);
 }
 
-PlayerState &Game::getPlayerState(std::string nickname)
+const PlayerState &Game::getPlayerState(std::string nickname)
 {
-    return *getPlayerStatePtr(std::move(nickname));
+    return getPlayerState_(std::move(nickname));
 }
 
-PlayerState &Game::getOpponentState(std::string nickname)
+const PlayerState &Game::getOpponentState(std::string nickname)
 {
     if (nickname == nicknames.first) {
-        return getPlayerState(nicknames.second);
+        return getPlayerState_(nicknames.second);
     }
     else if (nickname == nicknames.second) {
-        return getPlayerState(nicknames.first);
+        return getPlayerState_(nicknames.first);
     }
 
     throw GameException("No such player: " + nickname);
 }
 
-BallState &Game::getBallState()
+const BallState &Game::getBallState()
 {
     return ball;
 }
 
-PlayerSide Game::getPlayerSide(std::string nickname)
+Side Game::getPlayerSide(std::string nickname)
 {
     if (nickname == nicknames.first) {
-        return PlayerSide::Left;
+        return Side::Left;
     }
     else if (nickname == nicknames.second) {
-        return PlayerSide::Right;
+        return Side::Right;
     }
 
     throw GameException("No such player: " + nickname);
@@ -78,9 +80,14 @@ Timestamp Game::getTime()
 
 void Game::updatePlayerState(std::string nickname, PlayerState state)
 {
-    PlayerState oldState = getPlayerState(std::move(nickname));
+    PlayerState &oldState = getPlayerState_(std::move(nickname));
+    PlayerState expected = expectedPlayerState(oldState, state.timestamp());
 
-    // TODO: handle player update
+    if (state.position() != expected.position()) {
+        throw GamePlayException("new player state does not correspond with the expected!");
+    }
+
+    oldState = state;
 }
 
 void Game::ballHit(std::string nickname, PlayerState state, BallState ballState)
@@ -98,14 +105,43 @@ bool Game::isInPast(Timestamp time)
     return time <= getTime();
 }
 
-PlayerState Game::getNextPlayerState(BallState &state, Timestamp timestamp)
+PlayerState Game::expectedPlayerState(PlayerState &state, Timestamp timestamp)
 {
-    // TODO: implement get next player state
-    return PlayerState();
+    if (state.timestamp() > timestamp) {
+        throw GameException("player state timestamp is in future");
+    }
+
+    if (state.direction() == PlayerDirection::Stop) {
+        return {timestamp, state.position(), state.direction()};
+    }
+
+    double seconds = (timestamp - state.timestamp()) / 1000.0;
+    int dir = state.direction() == PlayerDirection::Up ? 1 : -1;
+
+    long position = static_cast<long>(state.position() + (dir * PLAYER_SPEED * seconds));
+
+    if (position > PLAYER_POSITION_MAX) {
+        position = PLAYER_POSITION_MAX;
+    }
+    else if (position < PLAYER_POSITION_MIN) {
+        position = PLAYER_POSITION_MIN;
+    }
+
+    return {timestamp, static_cast<PlayerPosition>(position), state.direction()};
 }
 
-BallState Game::getNextBallState(BallState &state)
+BallState Game::expectedBallState(BallState &state)
 {
-    // TODO: implement get next ball state
-    return BallState();
+    double radians = M_PI / 180 * state.direction();
+
+    // TODO: compute ball position position
+
+    double distance = (GAME_WIDTH - 2 * BALL_RADIUS) / std::cos(std::abs(radians));
+
+    double timestamp = distance / (state.speed() / 1000.0);
+    timestamp += state.timestamp();
+
+    Side side = state.side() == Side::Left ? Side::Right : Side::Left;
+
+    return {static_cast<Timestamp>(timestamp), side, static_cast<BallPosition>(position), state.direction(), state.speed()};
 }

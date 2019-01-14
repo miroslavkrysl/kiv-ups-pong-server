@@ -11,18 +11,20 @@ class Game;
 class BallState
 {
     Timestamp timestamp_;
+    Side side_;
     BallPosition position_;
     BallDirection direction_;
     Speed speed_;
 
 public:
     BallState();
-    BallState(Timestamp timestamp, BallPosition position, BallDirection direction, Speed speed);
+    BallState(Timestamp timestamp, Side side, BallPosition position, BallDirection direction, Speed speed);
     explicit BallState(std::list<std::string> items);
 
     void itemize(std::list<std::string> &destination);
 
     Timestamp timestamp();
+    Side side();
     BallPosition position();
     BallDirection direction();
     Speed speed();

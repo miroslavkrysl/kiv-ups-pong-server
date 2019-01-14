@@ -5,12 +5,15 @@ bool isValidTimestamp(unsigned long timestamp)
     return timestamp <= TIMESTAMP_MAX;
 }
 
+bool isValidSide(Side direction)
+{
+    return true;
+}
 
 bool isValidSpeed(unsigned long speed)
 {
     return speed <= BALL_SPEED_MAX && speed >= BALL_SPEED_MIN;;
 }
-
 
 bool isValidPlayerPosition(int position)
 {
@@ -27,12 +30,10 @@ bool isValidBallPosition(int position)
     return position <= BALL_POSITION_MAX && position >= BALL_POSITION_MIN;
 }
 
-
 bool isValidBallDirection(int direction)
 {
     return direction <= BALL_DIRECTION_MAX && direction >= BALL_DIRECTION_MIN;
 }
-
 
 Timestamp strToTimestamp(std::string &str)
 {
@@ -51,6 +52,20 @@ Timestamp strToTimestamp(std::string &str)
 
     return static_cast<Timestamp>(timestamp);
 }
+
+Side strToSide(std::string &str)
+{
+    if (str == "left") {
+        return Side::Left;
+    }
+    else if (str == "right") {
+        return Side::Right;
+    }
+    else {
+        throw GameTypeException("side is in invalid format");
+    }
+}
+
 
 Speed strToSpeed(std::string &str)
 {
@@ -179,10 +194,11 @@ std::string ballDirectionToStr(BallDirection ballDirection)
     return std::to_string(ballDirection);
 }
 
-std::string playerSideToStr(PlayerSide playerSide)
+std::string sideToStr(Side playerSide)
 {
     switch (playerSide) {
-    case PlayerSide::Left:return "left";
-    case PlayerSide::Right:return "right";
+    case Side::Left:return "left";
+    case Side::Center:return "center";
+    case Side::Right:return "right";
     }
 }

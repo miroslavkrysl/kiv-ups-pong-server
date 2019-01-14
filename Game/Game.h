@@ -19,17 +19,18 @@ class Game
 
     const std::chrono::steady_clock::time_point startTime;
 
-    PlayerState *getPlayerStatePtr(std::string nickname);
-    PlayerState getNextPlayerState(BallState &state, Timestamp timestamp);
-    BallState getNextBallState(BallState &state);
+    PlayerState &getPlayerState_(std::string nickname);
+
+    PlayerState expectedPlayerState(PlayerState &state, Timestamp timestamp);
+    BallState expectedBallState(BallState &state);
 
 public:
     Game(std::string playerLeft, std::string playerRight);
 
-    PlayerState &getPlayerState(std::string nickname);
-    PlayerState &getOpponentState(std::string nickname);
-    BallState &getBallState();
-    PlayerSide getPlayerSide(std::string nickname);
+    const PlayerState &getPlayerState(std::string nickname);
+    const PlayerState &getOpponentState(std::string nickname);
+    const BallState &getBallState();
+    Side getPlayerSide(std::string nickname);
     Timestamp getTime();
 
     void updatePlayerState(std::string nickname, PlayerState state);

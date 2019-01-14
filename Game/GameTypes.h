@@ -4,8 +4,9 @@
 #include <string>
 #include <stdexcept>
 
-enum class PlayerSide {
+enum class Side {
     Left,
+    Center,
     Right,
 };
 
@@ -49,6 +50,7 @@ const Score MAX_SCORE{UINT8_MAX};
 const Timestamp TIMESTAMP_MAX{UINT32_MAX};
 
 bool isValidTimestamp(unsigned long time);
+bool isValidSide(Side side);
 bool isValidSpeed(unsigned long speed);
 bool isValidPlayerPosition(int position);
 bool isValidPlayerDirection(PlayerDirection direction);
@@ -56,6 +58,7 @@ bool isValidBallPosition(int position);
 bool isValidBallDirection(int direction);
 
 Timestamp strToTimestamp(std::string &str);
+Side strToSide(std::string &str);
 Speed strToSpeed(std::string &str);
 PlayerPosition strToPlayerPosition(std::string &str);
 PlayerDirection strToPlayerDirection(std::string &str);
@@ -63,13 +66,13 @@ BallPosition strToBallPosition(std::string &str);
 BallDirection strToBallDirection(std::string &str);
 
 std::string timestampToStr(Timestamp timestamp);
+std::string sideToStr(Side playerSide);
 std::string speedToStr(Speed speed);
 std::string scoreToStr(Score score);
 std::string playerPositionToStr(PlayerPosition playerPosition);
 std::string playerDirectionToStr(PlayerDirection playerDirection);
 std::string ballPositionToStr(BallPosition ballPosition);
 std::string ballDirectionToStr(BallDirection ballDirection);
-std::string playerSideToStr(PlayerSide playerSide);
 
 class GameTypeException: public std::runtime_error
 {
