@@ -9,7 +9,7 @@ enum class Side {
     Right,
 };
 
-enum class PlayerDirection
+enum class Direction
 {
     Up,
     Down,
@@ -22,7 +22,7 @@ typedef int16_t BallPosition;
 typedef uint16_t Size;
 typedef uint8_t Score;
 typedef uint16_t Speed;
-typedef int8_t BallDirection;
+typedef int8_t Angle;
 
 const Timestamp START_DELAY{3000};
 
@@ -34,8 +34,8 @@ const Size BALL_RADIUS{25};
 const BallPosition BALL_POSITION_MAX{(GAME_HEIGHT / 2) - BALL_RADIUS};
 const BallPosition BALL_POSITION_MIN{-(GAME_HEIGHT / 2) + BALL_RADIUS};
 
-const BallDirection BALL_DIRECTION_MAX{60};
-const BallDirection BALL_DIRECTION_MIN{-60};
+const Angle ANGLE_MAX{60};
+const Angle ANGLE_MIN{-60};
 
 const Speed BALL_SPEED_MAX{1920};
 const Speed BALL_SPEED_MIN{640};
@@ -55,27 +55,27 @@ bool isValidSide(Side side);
 bool isValidSpeed(unsigned long speed);
 bool isValidScore(unsigned long score);
 bool isValidPlayerPosition(int position);
-bool isValidPlayerDirection(PlayerDirection direction);
+bool isValidDirection(Direction direction);
 bool isValidBallPosition(int position);
-bool isValidBallDirection(int direction);
+bool isValidAngle(int angle);
 
 Timestamp strToTimestamp(std::string &str);
 Side strToSide(std::string &str);
 Speed strToSpeed(std::string &str);
 Score strToScore(std::string &str);
 PlayerPosition strToPlayerPosition(std::string &str);
-PlayerDirection strToPlayerDirection(std::string &str);
+Direction strToDirection(std::string &str);
 BallPosition strToBallPosition(std::string &str);
-BallDirection strToBallDirection(std::string &str);
+Angle strToBallAngle(std::string &str);
 
 std::string timestampToStr(Timestamp timestamp);
 std::string sideToStr(Side playerSide);
 std::string speedToStr(Speed speed);
 std::string scoreToStr(Score score);
-std::string playerPositionToStr(PlayerPosition playerPosition);
-std::string playerDirectionToStr(PlayerDirection playerDirection);
-std::string ballPositionToStr(BallPosition ballPosition);
-std::string ballDirectionToStr(BallDirection ballDirection);
+std::string playerPositionToStr(PlayerPosition position);
+std::string directionToStr(Direction direction);
+std::string ballPositionToStr(BallPosition position);
+std::string angleToStr(Angle angle);
 
 class GameTypeException: public std::runtime_error
 {

@@ -1,11 +1,11 @@
 #pragma once
 
 #include <string>
-#include <list>
+#include <vector>
 
 #include "GameTypes.h"
 
-enum class PlayerDirection;
+enum class Direction;
 
 class PlayerState
 {
@@ -15,18 +15,20 @@ public:
 private:
     Timestamp timestamp_;
     PlayerPosition position_;
-    PlayerDirection direction_;
+    Direction direction_;
+
+    void validate();
 
 public:
     PlayerState();
-    PlayerState(Timestamp timestamp, PlayerPosition position, PlayerDirection direction);
-    explicit PlayerState(std::list<std::string> items);
-
-    void itemize(std::list<std::string> &destination);
+    explicit PlayerState(std::vector<std::string> items);
+    PlayerState(Timestamp timestamp, PlayerPosition position, Direction direction);
 
     Timestamp timestamp();
     PlayerPosition position();
-    PlayerDirection direction();
+    Direction direction();
+
+    std::vector<std::string> itemize();
 };
 
 

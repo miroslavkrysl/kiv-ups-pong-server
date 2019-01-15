@@ -1,8 +1,7 @@
 #pragma once
 
-#include <cstdint>
 #include <string>
-#include <list>
+#include <vector>
 
 #include "GameTypes.h"
 
@@ -11,25 +10,29 @@ class Game;
 class BallState
 {
 public:
-    static const size_t ITEMS_COUNT{4};
+    static const size_t ITEMS_COUNT{5};
 
 private:
     Timestamp timestamp_;
+    Side side_;
     BallPosition position_;
-    BallDirection direction_;
+    Angle angle_;
     Speed speed_;
+
+    void validate();
 
 public:
     BallState();
-    BallState(Timestamp timestamp, BallPosition position, BallDirection direction, Speed speed);
-    explicit BallState(std::list<std::string> items);
-
-    void itemize(std::list<std::string> &destination);
+    BallState(Timestamp timestamp, Side side, BallPosition position, Angle direction, Speed speed);
+    explicit BallState(std::vector<std::string> items);
 
     Timestamp timestamp();
+    Side side();
     BallPosition position();
-    BallDirection direction();
+    Angle angle();
     Speed speed();
+
+    std::vector<std::string> itemize();
 };
 
 

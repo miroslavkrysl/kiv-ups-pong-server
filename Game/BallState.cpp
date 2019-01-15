@@ -1,55 +1,57 @@
 #include "BallState.h"
 
-BallState::BallState()
-    : timestamp_{0},
-      position_{0},
-      direction_{0},
-      speed_{BALL_SPEED_MIN}
-{}
-
-BallState::BallState(Timestamp timestamp, BallPosition position, BallDirection direction, Speed speed)
-    : timestamp_{timestamp},
-      position_{position},
-      direction_{direction},
-      speed_{speed}
+void BallState::validate()
 {
-    if (!isValidTimestamp(timestamp)) {
+    if (!isValidTimestamp(timestamp_)) {
         throw GameTypeException("ball timestamp is invalid");
     }
-    if (!isValidBallPosition(position)) {
+    if (!isValidSide(side_)) {
+        throw GameTypeException("ball side is invalid");
+    }
+    if (!isValidBallPosition(position_)) {
         throw GameTypeException("ball position is invalid");
     }
-    if (!isValidBallDirection(direction)) {
-        throw GameTypeException("ball direction is invalid");
+    if (!isValidAngle(angle_)) {
+        throw GameTypeException("ball angle is invalid");
     }
-    if (!isValidSpeed(speed)) {
+    if (!isValidSpeed(speed_)) {
         throw GameTypeException("ball speed is invalid");
     }
 }
 
-BallState::BallState(std::list<std::string> items)
+BallState::BallState()
+    : timestamp_{0},
+      side_{Side::Left},
+      position_{0},
+      angle_{0},
+      speed_{BALL_SPEED_MIN}
+{
+    validate();
+}
+
+BallState::BallState(Timestamp timestamp, Side side, BallPosition position, Angle angle, Speed speed)
+    : timestamp_{timestamp},
+      side_{side},
+      position_{position},
+      angle_{angle},
+      speed_{speed}
+{
+    validate();
+}
+
+BallState::BallState(std::vector<std::string> items)
 {
     if (items.size() != ITEMS_COUNT) {
         throw GameTypeException("too few items to create a BallState");
     }
 
-    auto itemPtr = items.begin();
-    timestamp_ = strToTimestamp(*itemPtr);
-    itemPtr++;
-    position_ = strToBallPosition(*itemPtr);
-    itemPtr++;
-    direction_ = strToBallDirection(*itemPtr);
-    itemPtr++;
-    speed_ = strToSpeed(*itemPtr);
-}
+    timestamp_ = strToTimestamp(items[0]);
+    side_ = strToSide(items[1]);
+    position_ = strToBallPosition(items[2]);
+    angle_ = strToBallAngle(items[3]);
+    speed_ = strToSpeed(items[4]);
 
-void BallState::itemize(std::list<std::string> &destination)
-{
-    destination.clear();
-    destination.push_back(timestampToStr(timestamp_));
-    destination.push_back(ballPositionToStr(position_));
-    destination.push_back(ballDirectionToStr(direction_));
-    destination.push_back(speedToStr(speed_));
+    validate();
 }
 
 Timestamp BallState::timestamp()
@@ -57,17 +59,32 @@ Timestamp BallState::timestamp()
     return timestamp_;
 }
 
+Side BallState::side()
+{
+    return side_;
+}
+
 BallPosition BallState::position()
 {
     return position_;
 }
 
-BallDirection BallState::direction()
+Angle BallState::angle()
 {
-    return direction_;
+    return angle_;
 }
 
 Speed BallState::speed()
 {
     return speed_;
+}
+
+std::vector<std::string> BallState::itemize()
+{
+    return {
+        timestampToStr(timestamp_),
+        ballPositionToStr(position_),
+        angleToStr(angle_),
+        speedToStr(speed_)
+    };
 }

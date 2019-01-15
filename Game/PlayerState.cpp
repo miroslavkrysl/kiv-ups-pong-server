@@ -1,49 +1,45 @@
-#include <sstream>
-
 #include "PlayerState.h"
 
-PlayerState::PlayerState()
-    : timestamp_{0},
-      position_{0},
-      direction_{PlayerDirection::Stop}
-{}
-
-PlayerState::PlayerState(Timestamp timestamp, PlayerPosition position, PlayerDirection direction)
-    : timestamp_{timestamp},
-      position_{position},
-      direction_{direction}
+void PlayerState::validate()
 {
-    if (!isValidTimestamp(timestamp)) {
+    if (!isValidTimestamp(timestamp_)) {
         throw GameTypeException("player timestamp is invalid");
     }
-    if (!isValidPlayerPosition(position)) {
+    if (!isValidPlayerPosition(position_)) {
         throw GameTypeException("player position is invalid");
     }
-    if (!isValidPlayerDirection(direction)) {
+    if (!isValidDirection(direction_)) {
         throw GameTypeException("player direction is invalid");
     }
 }
 
-PlayerState::PlayerState(std::list<std::string> items)
+PlayerState::PlayerState()
+    : timestamp_{0},
+      position_{0},
+      direction_{Direction::Stop}
+{
+    validate();
+}
+
+PlayerState::PlayerState(Timestamp timestamp, PlayerPosition position, Direction direction)
+    : timestamp_{timestamp},
+      position_{position},
+      direction_{direction}
+{
+    validate();
+}
+
+PlayerState::PlayerState(std::vector<std::string> items)
 {
     if (items.size() != ITEMS_COUNT) {
         throw GameTypeException("too few items to create a PlayerState");
     }
 
-    auto itemPtr = items.begin();
-    timestamp_ = strToTimestamp(*itemPtr);
-    itemPtr++;
-    position_ = strToPlayerPosition(*itemPtr);
-    itemPtr++;
-    direction_ = strToPlayerDirection(*itemPtr);
-}
+    timestamp_ = strToTimestamp(items[0]);
+    position_ = strToPlayerPosition(items[1]);
+    direction_ = strToDirection(items[2]);
 
-void PlayerState::itemize(std::list<std::string> &destination)
-{
-    destination.clear();
-    destination.push_back(timestampToStr(timestamp_));
-    destination.push_back(playerPositionToStr(position_));
-    destination.push_back(playerDirectionToStr(direction_));
+    validate();
 }
 
 Timestamp PlayerState::timestamp()
@@ -56,7 +52,16 @@ PlayerPosition PlayerState::position()
     return position_;
 }
 
-PlayerDirection PlayerState::direction()
+Direction PlayerState::direction()
 {
     return direction_;
+}
+
+std::vector<std::string> PlayerState::itemize()
+{
+    return {
+        timestampToStr(timestamp_),
+        playerPositionToStr(position_),
+        directionToStr(direction_)
+    };
 }
