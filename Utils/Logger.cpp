@@ -3,6 +3,7 @@
 
 #include "Logger.h"
 #include "Decor.h"
+#include "../Network/Connection.h"
 
 Logger::Logger(std::string baseLogFile, std::string communicationLogFile, std::string statsFile)
     : baseLogFileName(baseLogFile),
@@ -47,7 +48,7 @@ void Logger::log(const std::string &message, Level level)
     baseLogFile << message << std::endl;
 }
 
-void Logger::logCommunication(Packet &packet, bool incoming, std::string id)
+void Logger::logCommunication(Packet &packet, bool incoming, Uid id)
 {
     std::ostringstream serialized;
     std::string serializedPacket = packet.toLogString();

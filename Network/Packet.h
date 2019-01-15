@@ -2,7 +2,6 @@
 
 #include <string>
 #include <vector>
-#include <list>
 #include <stdexcept>
 #include <array>
 
@@ -13,24 +12,24 @@ public:
     static const std::array<char, 3> TERMINATOR;
     static const size_t MAX_SIZE{1024};
 
+    static Packet parse(const std::string &contents);
+
 private:
     std::string type;
-    std::list<std::string> items;
+    std::vector<std::string> items;
 
 public:
     explicit Packet(std::string type = "");
-    explicit Packet(std::string type, std::list<std::string> items);
+    explicit Packet(std::string type, std::vector<std::string> items);
 
-    void parse(std::string contents);
-    std::string serialize();
-    std::string toLogString();
-    void clear();
-
-    void addItem(std::string item);
-
-    void setType(std::string type);
     std::string getType();
-    std::list<std::string> &getItems();
+    std::vector<std::string> &getItems();
+    std::string serialize();
+    void clear();
+    void addItem(std::string item);
+    void setType(std::string type);
+
+    std::string toLogString();
 };
 
 class PacketException: public std::runtime_error

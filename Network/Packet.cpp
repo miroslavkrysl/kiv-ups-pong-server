@@ -1,28 +1,14 @@
-#include <utility>
-
-#include <utility>
-
-#include <list>
+#include <vector>
 #include <sstream>
-#include <iostream>
 
 #include "Packet.h"
 
 constexpr std::array<char, 3> Packet::TERMINATOR = {"\r\n"};
 
-Packet::Packet(std::string type)
-    : type{std::move(type)}
-{}
-
-Packet::Packet(std::string type, std::list<std::string> items)
-    : type{std::move(type)},
-      items{std::move(items)}
-{}
-
-void Packet::parse(std::string contents)
+Packet Packet::parse(const std::string &contents)
 {
     // tokenize by delimiter
-    std::list<std::string> tokens;
+    std::vector<std::string> tokens;
     std::stringstream ss{contents};
 
     while (!ss.eof()) {
@@ -35,12 +21,29 @@ void Packet::parse(std::string contents)
     clear();
 
     // first token is token type name
-    type = tokens.front();
-    tokens.pop_front();
+    std::string type = tokens.front();
+    tokens.erase(tokens.begin());
 
-    for (auto &token : tokens) {
-        addItem(token);
-    }
+    return Packet{type, tokens};
+}
+
+Packet::Packet(std::string type)
+    : type{std::move(type)}
+{}
+
+Packet::Packet(std::string type, std::vector<std::string> items)
+    : type{std::move(type)},
+      items{std::move(items)}
+{}
+
+std::string Packet::getType()
+{
+    return type;
+}
+
+std::vector<std::string> &Packet::getItems()
+{
+    return items;
 }
 
 std::string Packet::serialize()
@@ -63,6 +66,22 @@ std::string Packet::serialize()
     return serialized;
 }
 
+void Packet::clear()
+{
+    type.clear();
+    items.clear();
+}
+
+void Packet::addItem(std::string item)
+{
+    items.push_back(item);
+}
+
+void Packet::setType(std::string type)
+{
+    this->type = std::move(type);
+}
+
 std::string Packet::toLogString()
 {
     std::string serialized;
@@ -75,30 +94,4 @@ std::string Packet::toLogString()
     }
 
     return serialized;
-}
-
-void Packet::clear()
-{
-    type.clear();
-    items.clear();
-}
-
-void Packet::addItem(std::string item)
-{
-    items.push_back(item);
-}
-
-std::list<std::string> &Packet::getItems()
-{
-    return items;
-}
-
-std::string Packet::getType()
-{
-    return type;
-}
-
-void Packet::setType(std::string type)
-{
-    this->type = std::move(type);
 }

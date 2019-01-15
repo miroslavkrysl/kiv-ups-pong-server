@@ -46,6 +46,19 @@ sockaddr_in &Server::getAddress()
     return address;
 }
 
+void Server::addNickname(std::string nickname)
+{
+    nicknamesMutex.lock();
+
+    auto inserted = nicknames.insert(nickname);
+
+    nicknamesMutex.unlock();
+
+    if (!inserted.second) {
+        throw ServerException("nickname " + nickname + " already exists");
+    };
+}
+
 Connection &Server::addConnection(int socket, sockaddr_in address)
 {
     connectionsMutex.lock();

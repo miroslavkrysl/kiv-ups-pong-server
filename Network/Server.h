@@ -6,6 +6,7 @@
 #include <mutex>
 #include <list>
 #include <functional>
+#include <unordered_set>
 
 #include "ConnectionAcceptor.h"
 #include "Connection.h"
@@ -29,6 +30,9 @@ class Server: public Thread
     Uid lastUid;
     std::mutex connectionsMutex;
 
+    std::unordered_set<std::string> nicknames;
+    std::mutex nicknamesMutex;
+
     std::list<std::unique_ptr<Game>> publicGames;
     std::unordered_map<std::string, std::unique_ptr<Game>> privateGames;
     std::mutex publicGamesMutex;
@@ -40,6 +44,8 @@ public:
     Stats &getStats();
     Logger &getLogger();
     sockaddr_in &getAddress();
+
+    void addNickname(std::string nickname);
 
     Connection &addConnection(int socket, sockaddr_in address);
     size_t clearClosedConnections();

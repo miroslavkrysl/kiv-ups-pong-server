@@ -1,32 +1,109 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
-#include <thread>
-#include <cstring>
 #include <regex>
-#include <iostream>
 
 #include "Connection.h"
 #include "Packet.h"
 #include "Server.h"
 
-Connection::Connection(int socket, sockaddr_in address, Server &server)
-    : socket{socket},
+Connection::Connection(Uid uid, int socket, sockaddr_in address, Server &server)
+    : uid{uid},
+      socket{socket},
       address{address},
       server{server},
       nickname{""},
-      mode{Mode::Idle},
+      mode{ConnectionMode::Idle},
       game{nullptr}
 {
     char ipString[INET_ADDRSTRLEN];
     ::inet_ntop(AF_INET, &(address.sin_addr), ipString, INET_ADDRSTRLEN);
 
-    this->ipString = ipString;
+    ip = ipString;
+}
+
+Uid Connection::getUid()
+{
+    return uid;
+}
+
+std::string Connection::getUidStr(size_t fill)
+{
+    std::string str = std::to_string(uid);
+
+    if (fill > str.size())
+        str.insert(str.size(), str.size() + fill - str.size(), ' ');
+
+    return str;
+}
+
+std::string Connection::getNickname()
+{
+    return nickname;
+}
+
+bool Connection::isIdentified()
+{
+    return !nickname.empty();
+}
+
+bool Connection::isClosed()
+{
+    return socket == -1;
+}
+
+void Connection::setMode(ConnectionMode mode)
+{
+    timeval recvTimeout{};
+    timeval sendTimeout{};
+
+    switch (mode) {
+    case ConnectionMode::Idle: {
+        recvTimeout = RECV_TIMEOUT_IDLE;
+        inactiveTimeout = INACTIVE_TIMEOUT_IDLE;
+        break;
+    }
+    case ConnectionMode::Busy: {
+        recvTimeout = RECV_TIMEOUT_BUSY;
+        inactiveTimeout = INACTIVE_TIMEOUT_BUSY;
+        break;
+    }
+    default: {
+        throw ConnectionException("can not set connection mode " + std::to_string(static_cast<int>(mode)));
+    }
+    }
+
+    this->mode = mode;
+    setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const void *>(&recvTimeout), sizeof(recvTimeout));
+}
+
+void Connection::send(Packet &packet)
+{
+    std::string contents = packet.serialize();
+
+    ssize_t sentBytes = ::send(socket, contents.c_str(), contents.length(), 0);
+
+    if (sentBytes == 0) {
+        // success
+        server.getStats().addPacketsSent(1);
+        server.getStats().addBytesSent(static_cast<uint64_t>(sentBytes));
+        server.getLogger().logCommunication(packet, false, getUid());
+    }
+}
+
+void Connection::before()
+{
+    if (isClosed()) {
+        throw ConnectionException("invalid socket");
+    }
+
+    setsockopt(socket, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const void *>(&SEND_TIMEOUT), sizeof(SEND_TIMEOUT));
+    setMode(ConnectionMode::Idle);
 }
 
 void Connection::run()
 {
-    server.getLogger().log("connection listening: " + ipString, Logger::Level::Success);
+    server.getLogger().log(getUidStr(6) + " - listening", Logger::Level::Success);
 
     char buffer[1024];
     std::string data;
@@ -34,6 +111,7 @@ void Connection::run()
 
     while (!shouldStop() && !isClosed()) {
 
+        // receive available bytes
         ssize_t bytesRead = ::recv(socket, buffer, sizeof(buffer), 0);
 
         if (bytesRead == -1) {
@@ -47,7 +125,7 @@ void Connection::run()
                 if (inactive > inactiveTimeout) {
                     // inactive too long, probably dead
                     server.getLogger()
-                        .log("connection: " + getId() + " inactive for too long - disconnecting",
+                        .log(getUidStr(6) + " - inactive for too long - disconnecting",
                              Logger::Level::Warning);
                     return;
                 }
@@ -64,8 +142,8 @@ void Connection::run()
             else {
                 // unrecoverable error
                 server.getLogger()
-                    .log("ERROR: error while receiving from the connection: " + getId() + ": "
-                             + std::string{strerror(errno)}, Logger::Level::Error);
+                    .log(getUidStr(6) + " - error while receiving: " + std::string{strerror(errno)},
+                         Logger::Level::Error);
                 return;
             }
         }
@@ -73,7 +151,7 @@ void Connection::run()
         if (bytesRead == 0) {
             // player orderly disconnected
             server.getLogger()
-                .log("player orderly disconnected: " + getId());
+                .log(getUidStr(6) + " - orderly disconnected");
             return;
         }
 
@@ -84,6 +162,7 @@ void Connection::run()
         for (int i = 0; i < bytesRead; ++i) {
             bool endMessage{false};
 
+            // search for the termination symbol
             for (int j = 0; j < Packet::TERMINATOR.size() - 1; ++j) {
                 if (buffer[i + j] != Packet::TERMINATOR[j]) {
                     endMessage = false;
@@ -92,18 +171,17 @@ void Connection::run()
                 endMessage = true;
             }
 
-            // search for the termination symbol
             if (endMessage) {
                 // if found, the whole message was received
 
                 //skip termination symbols
                 i += Packet::TERMINATOR.size() - 1;
 
+                // handle received message
                 try {
-                    Packet packet;
-                    packet.parse(data);
+                    Packet packet = Packet::parse(data);
 
-                    server.getLogger().logCommunication(packet, true, getId());
+                    server.getLogger().logCommunication(packet, true, getUid());
                     handlePacket(packet);
 
                     corruptedPackets = 0;
@@ -115,7 +193,7 @@ void Connection::run()
                 }
                 catch (...) {
                     server.getLogger()
-                        .log("ERROR: unrecoverable error on connection: " + getId() + " - disconnecting",
+                        .log(getUidStr(6) + " - unrecoverable error - disconnecting: ",
                              Logger::Level::Error);
                     stop(false);
                     break;
@@ -140,121 +218,48 @@ void Connection::run()
         if (corruptedPackets > CORRUPTED_PACKETS_LIMIT) {
             // connection probably corrupted
             server.getLogger()
-                .log("ERROR: too much corrupted data receive from the connection: " + getId() + " - disconnecting",
+                .log(getUidStr(6) + " - too much corrupted data received - disconnecting",
                      Logger::Level::Error);
             break;
         }
     }
 }
 
-void Connection::send(Packet &packet)
-{
-    std::string contents = packet.serialize();
-
-    while (!isClosed()) {
-        ssize_t sentBytes = ::send(socket, contents.c_str(), contents.length(), 0);
-
-        if (sentBytes >= 0) {
-            server.getStats().addPacketsSent(1);
-            server.getStats().addBytesSent(static_cast<uint64_t>(sentBytes));
-            server.getLogger().logCommunication(packet, false, getId());
-            break;
-        }
-
-        // an error occurred
-        if (errno == EAGAIN) {
-            // internal sending buffer full
-            auto now = std::chrono::steady_clock::now();
-            auto inactive = now - lastSendAt;
-
-            if (inactive < inactiveTimeout) {
-                // inactive time limit not exceeded
-                // try send again
-                continue;
-            }
-        }
-        else if (errno == EBADF || errno == EINVAL) {
-            // socket shut down
-        }
-        else {
-            // unrecoverable error
-            stop(false);
-        }
-
-        break;
-    }
-}
-
-bool Connection::isClosed()
-{
-    return socket == -1;
-}
-
-bool Connection::isIdentified()
-{
-    return !nickname.empty();
-}
-
-std::string Connection::getId()
-{
-    return nickname.empty() ? ipString : nickname;
-}
-
-void Connection::setMode(Connection::Mode mode)
-{
-    timeval recvTimeout{};
-    timeval sendTimeout{};
-
-    switch (mode) {
-    case Mode::Idle:
-        recvTimeout = RECV_TIMEOUT_IDLE;
-        sendTimeout = SEND_TIMEOUT_IDLE;
-        inactiveTimeout = INACTIVE_TIMEOUT_IDLE;
-        break;
-    case Mode::Busy:
-        recvTimeout = RECV_TIMEOUT_BUSY;
-        sendTimeout = SEND_TIMEOUT_BUSY;
-        inactiveTimeout = INACTIVE_TIMEOUT_BUSY;
-        break;
-    default:
-        throw ConnectionException("can not set mode " + std::to_string(static_cast<int>(mode)));
-    }
-
-    this->mode = mode;
-    setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const void *>(&recvTimeout), sizeof(recvTimeout));
-    setsockopt(socket, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const void *>(&sendTimeout), sizeof(sendTimeout));
-}
-
 bool Connection::stop(bool wait)
 {
+    // shutdown the socket to break the blocking recv() call
     ::shutdown(socket, SHUT_RDWR);
     return Thread::stop(wait);
-}
-
-void Connection::before()
-{
-    setMode(Mode::Idle);
 }
 
 void Connection::after()
 {
     ::close(socket);
     socket = -1;
-    server.getLogger().log("connection closed: " + ipString, Logger::Level::Warning);
+    server.getLogger().log(getUidStr(6) + " - connection closed", Logger::Level::Warning);
 }
 
 void Connection::handlePacket(Packet packet)
 {
-    auto typeHandler = handlers.find(packet.getType());
+    auto typeHandler = PACKET_HANDLERS.find(packet.getType());
 
-    if (typeHandler == handlers.end()) {
+    if (typeHandler == PACKET_HANDLERS.end()) {
         throw UnknownPacketException("unknown packet type: [" + packet.getType() + "]");
     }
 
-    Handler handler = typeHandler->second;
+    PacketHandler handler = typeHandler->second;
 
     (this->*handler)(packet);
 }
+
+void Connection::handlePoke(Packet packet)
+{
+    Packet response{"poke_back"};
+    send(response);
+}
+
+void Connection::handlePokeBack(Packet packet)
+{}
 
 void Connection::handleLogin(Packet packet)
 {
@@ -264,7 +269,7 @@ void Connection::handleLogin(Packet packet)
 
     auto items = packet.getItems();
 
-    if (items.size() != 1 ) {
+    if (items.size() != 1) {
         throw MalformedPacketException{"login packet must have only 1 argument: nickname"};
     }
 
@@ -275,7 +280,7 @@ void Connection::handleLogin(Packet packet)
 
     if (std::regex_match(nickname, nicknameRegex)) {
         try {
-            server.addPlayer(nickname, this);
+            server.addNickname(nickname);
             this->nickname = nickname;
             response.setType("login_ok");
         }
@@ -294,13 +299,13 @@ void Connection::handleLogin(Packet packet)
 
 void Connection::handleJoinRandomGame(Packet packet)
 {
-    if (game) {
-        throw NonContextualPacketException{"already in a game"};
-    }
-
-    if (!isIdentified()) {
-        throw NonContextualPacketException{"not logged"};
-    }
+//    if (game) {
+//        throw NonContextualPacketException{"already in a game"};
+//    }
+//
+//    if (!isIdentified()) {
+//        throw NonContextualPacketException{"not logged"};
+//    }
 
 
     // TODO: handle join random game
@@ -308,92 +313,20 @@ void Connection::handleJoinRandomGame(Packet packet)
 
 void Connection::handleJoinPrivateGame(Packet packet)
 {
-    if (game) {
-        throw NonContextualPacketException{"already in a game"};
-    }
-
-    if (!isIdentified()) {
-        throw NonContextualPacketException{"not logged"};
-    }
+//    if (game) {
+//        throw NonContextualPacketException{"already in a game"};
+//    }
+//
+//    if (!isIdentified()) {
+//        throw NonContextualPacketException{"not logged"};
+//    }
 
     // TODO: handle join private game
 }
 
-void Connection::handleUpdateState(Packet packet)
+void Connection::handleCreatePrivateGame(Packet packet)
 {
-    if (!game) {
-        throw NonContextualPacketException{"not in a game"};
-    }
-
-    try {
-        PlayerState state{packet.getItems()};
-        game->updatePlayerState(nickname, state);
-
-        std::list<std::string> items;
-        state.itemize(items);
-
-        Packet forOpponent{"update_opponent", items};
-    }
-    catch (GameTypeException &exception) {
-        throw MalformedPacketException{exception.what()};
-    }
-    catch (GamePlayException &exception) {
-        throw InvalidPacketException{exception.what()};
-    }
-}
-
-void Connection::handleBallHit(Packet packet)
-{
-    if (!game) {
-        throw NonContextualPacketException{"not in a game"};
-    }
-
-    if (packet.getItems().size() != PlayerState::ITEMS_COUNT + BallState::ITEMS_COUNT) {
-        throw MalformedPacketException{"too few items in the packet"};
-    }
-
-    try {
-        // extract items from packet
-        std::list<std::string> packetItems = packet.getItems();
-
-        auto it = packetItems.begin();
-        std::advance(it, PlayerState::ITEMS_COUNT - 1);
-
-        std::list<std::string> playerItems{packetItems.begin(), it};
-        std::list<std::string> ballItems{packetItems.begin(), packetItems.end()};
-
-
-        // create player and ball states from items and update game
-        PlayerState playerState{playerItems};
-        game->updatePlayerState(nickname, playerState);
-
-        BallState ballState{ballItems};
-        game->ballHit(nickname, ballState);
-
-
-        // send responses
-        std::list<std::string> items;
-        Connection &opponent = server.getConnection(game->getOpponentNickname(nickname));
-
-        if (game->getState() == GameState::NewRound) {
-            game->itemize(items);
-            Packet response{"new_round", items};
-
-            send(response);
-            opponent.send(response);
-        }
-        else {
-            ballState.itemize(items);
-            Packet forOpponent{"ball_hit", items};
-            opponent.send(forOpponent);
-        }
-    }
-    catch (GameTypeException &exception) {
-        throw MalformedPacketException{exception.what()};
-    }
-    catch (GamePlayException &exception) {
-        throw InvalidPacketException{exception.what()};
-    }
+    // TODO: handle crate private game
 }
 
 void Connection::handleLeaveGame(Packet packet)
@@ -401,17 +334,98 @@ void Connection::handleLeaveGame(Packet packet)
     // TODO: handle leave
 }
 
-void Connection::handlePoke(Packet packet)
+void Connection::handleGetTime(Packet packet)
 {
-    Packet response{"poke_back"};
-    send(response);
+    // TODO: handle get time
 }
 
-std::string Connection::getNickname()
+void Connection::handleReady(Packet packet)
 {
-    return nickname;
+    // TODO: handle ready
 }
 
-void Connection::handlePokeBack(Packet packet)
-{}
+void Connection::handleUpdateState(Packet packet)
+{
+//    if (!game) {
+//        throw NonContextualPacketException{"not in a game"};
+//    }
+//
+//    try {
+//        PlayerState state{packet.getItems()};
+//        game->updatePlayerState(nickname, state);
+//
+//        std::list<std::string> items;
+//        state.itemize(items);
+//
+//        Packet forOpponent{"update_opponent", items};
+//    }
+//    catch (GameTypeException &exception) {
+//        throw MalformedPacketException{exception.what()};
+//    }
+//    catch (GamePlayException &exception) {
+//        throw InvalidPacketException{exception.what()};
+//    }
+    // TODO: handle update state
+}
 
+void Connection::handleBallHit(Packet packet)
+{
+//    if (!game) {
+//        throw NonContextualPacketException{"not in a game"};
+//    }
+//
+//    if (packet.getItems().size() != PlayerState::ITEMS_COUNT + BallState::ITEMS_COUNT) {
+//        throw MalformedPacketException{"too few items in the packet"};
+//    }
+//
+//    try {
+//        // extract items from packet
+//        std::list<std::string> packetItems = packet.getItems();
+//
+//        auto it = packetItems.begin();
+//        std::advance(it, PlayerState::ITEMS_COUNT - 1);
+//
+//        std::list<std::string> playerItems{packetItems.begin(), it};
+//        std::list<std::string> ballItems{packetItems.begin(), packetItems.end()};
+//
+//
+//        // create player and ball states from items and update game
+//        PlayerState playerState{playerItems};
+//        game->updatePlayerState(nickname, playerState);
+//
+//        BallState ballState{ballItems};
+//        game->ballHit(nickname, ballState);
+//
+//
+//        // send responses
+//        std::list<std::string> items;
+//        Connection &opponent = server.getConnection(game->getOpponentNickname(nickname));
+//
+//        if (game->getState() == GameState::NewRound) {
+//            game->itemize(items);
+//            Packet response{"new_round", items};
+//
+//            send(response);
+//            opponent.send(response);
+//        }
+//        else if (game->getState() == GameState::End) {
+//            game->itemize(items);
+//            Packet response{"game_end", items};
+//
+//            send(response);
+//            opponent.send(response);
+//        }
+//        else {
+//            ballState.itemize(items);
+//            Packet forOpponent{"ball_hit", items};
+//            opponent.send(forOpponent);
+//        }
+//    }
+//    catch (GameTypeException &exception) {
+//        throw MalformedPacketException{exception.what()};
+//    }
+//    catch (GamePlayException &exception) {
+//        throw InvalidPacketException{exception.what()};
+//    }
+    // TODO: handle ball hit
+}
