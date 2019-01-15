@@ -138,7 +138,7 @@ Direction strToDirection(std::string &str)
         return Direction::Stop;
     }
     else {
-        throw GameTypeException("player direction is in invalid format");
+        throw GameTypeException("direction is in invalid format");
     }
 }
 
@@ -172,7 +172,7 @@ Angle strToBallAngle(std::string &str)
         }
     }
     catch (...) {
-        throw GameTypeException("ball direction is in invalid format");
+        throw GameTypeException("angle is in invalid format");
     }
 
     return static_cast<Angle>(direction);
@@ -217,10 +217,11 @@ std::string angleToStr(Angle ballDirection)
     return std::to_string(ballDirection);
 }
 
-std::string sideToStr(Side playerSide)
+std::string sideToStr(Side side)
 {
-    switch (playerSide) {
+    switch (side) {
     case Side::Left:return "left";
+    case Side::Center:return "center";
     case Side::Right:return "right";
     }
 }

@@ -21,7 +21,7 @@ void BallState::validate()
 
 BallState::BallState()
     : timestamp_{0},
-      side_{Side::Left},
+      side_{Side::Center},
       position_{0},
       angle_{0},
       speed_{BALL_SPEED_MIN}
