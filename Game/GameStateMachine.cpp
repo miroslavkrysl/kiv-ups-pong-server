@@ -2,30 +2,59 @@
 
 GameStateMachine::GameStateMachine()
 {
-    addState(GameState::NewRound);
-    addState(GameState::StartLeft);
-    addState(GameState::StartRight);
-    addState(GameState::ToLeft);
-    addState(GameState::ToRight);
+    addState(GameState::New);
+    addState(GameState::JoinedL);
+    addState(GameState::JoinedR);
+    addState(GameState::RoundStart);
+    addState(GameState::ReadyL);
+    addState(GameState::ReadyR);
+    addState(GameState::ReadyBoth);
+    addState(GameState::BallToL);
+    addState(GameState::BallToR);
+    addState(GameState::LeftR);
+    addState(GameState::LeftL);
     addState(GameState::End);
 
-    addTransition(GameState::NewRound, GameState::StartLeft, GameEvent::ReleaseLeft);
-    addTransition(GameState::NewRound, GameState::StartRight, GameEvent::ReleaseRight);
-    addTransition(GameState::StartLeft, GameState::NewRound, GameEvent::NewRound);
-    addTransition(GameState::StartRight, GameState::NewRound, GameEvent::NewRound);
-    addTransition(GameState::StartLeft, GameState::ToRight, GameEvent::HitLeft);
-    addTransition(GameState::StartRight, GameState::ToLeft, GameEvent::HitRight);
-    addTransition(GameState::StartLeft, GameState::NewRound, GameEvent::MissLeft);
-    addTransition(GameState::StartRight, GameState::NewRound, GameEvent::MissRight);
-    addTransition(GameState::ToLeft, GameState::ToRight, GameEvent::HitLeft);
-    addTransition(GameState::ToRight, GameState::ToLeft, GameEvent::HitRight);
-    addTransition(GameState::ToLeft, GameState::NewRound, GameEvent::MissLeft);
-    addTransition(GameState::ToRight, GameState::NewRound, GameEvent::MissRight);
-    addTransition(GameState::ToLeft, GameState::NewRound, GameEvent::NewRound);
-    addTransition(GameState::ToRight, GameState::NewRound, GameEvent::NewRound);
-    addTransition(GameState::NewRound, GameState::End, GameEvent::EndGame);
+    // normal flow
+    addTransition(GameState::New, GameState::JoinedL, GameEvent::JoinL);
+    addTransition(GameState::New, GameState::JoinedR, GameEvent::JoinR);
+    addTransition(GameState::JoinedL, GameState::RoundStart, GameEvent::JoinR);
+    addTransition(GameState::JoinedR, GameState::RoundStart, GameEvent::JoinL);
+    addTransition(GameState::RoundStart, GameState::ReadyL, GameEvent::ReadyL);
+    addTransition(GameState::RoundStart, GameState::ReadyR, GameEvent::ReadyR);
+    addTransition(GameState::ReadyL, GameState::ReadyBoth, GameEvent::ReadyR);
+    addTransition(GameState::ReadyR, GameState::ReadyBoth, GameEvent::ReadyL);
+    addTransition(GameState::ReadyBoth, GameState::BallToL, GameEvent::ReleaseL);
+    addTransition(GameState::ReadyBoth, GameState::BallToR, GameEvent::ReleaseR);
+    addTransition(GameState::BallToL, GameState::BallToR, GameEvent::HitL);
+    addTransition(GameState::BallToR, GameState::BallToL, GameEvent::HitR);
+    addTransition(GameState::BallToL, GameState::RoundStart, GameEvent::MissL);
+    addTransition(GameState::BallToR, GameState::RoundStart, GameEvent::MissR);
 
-    setCurrentState(GameState::NewRound);
+    // player left game
+    addTransition(GameState::JoinedL, GameState::LeftL, GameEvent::LeaveL);
+    addTransition(GameState::JoinedL, GameState::LeftR, GameEvent::LeaveR);
+    addTransition(GameState::JoinedR, GameState::LeftL, GameEvent::LeaveL);
+    addTransition(GameState::JoinedR, GameState::LeftR, GameEvent::LeaveR);
+    addTransition(GameState::RoundStart, GameState::LeftL, GameEvent::LeaveL);
+    addTransition(GameState::RoundStart, GameState::LeftR, GameEvent::LeaveR);
+    addTransition(GameState::ReadyL, GameState::LeftL, GameEvent::LeaveL);
+    addTransition(GameState::ReadyL, GameState::LeftR, GameEvent::LeaveR);
+    addTransition(GameState::ReadyR, GameState::LeftL, GameEvent::LeaveL);
+    addTransition(GameState::ReadyR, GameState::LeftR, GameEvent::LeaveR);
+    addTransition(GameState::ReadyBoth, GameState::LeftL, GameEvent::LeaveL);
+    addTransition(GameState::ReadyBoth, GameState::LeftR, GameEvent::LeaveR);
+    addTransition(GameState::BallToL, GameState::LeftL, GameEvent::LeaveL);
+    addTransition(GameState::BallToL, GameState::LeftR, GameEvent::LeaveR);
+    addTransition(GameState::BallToR, GameState::LeftL, GameEvent::LeaveL);
+    addTransition(GameState::BallToR, GameState::LeftR, GameEvent::LeaveR);
+
+    addTransition(GameState::LeftL, GameState::End, GameEvent::LeaveR);
+    addTransition(GameState::LeftR, GameState::End, GameEvent::LeaveL);
+
+    addTransition(GameState::New, GameState::End, GameEvent::End);
+
+    setCurrentState(GameState::New);
 }
 
 void GameStateMachine::addState(GameState state)

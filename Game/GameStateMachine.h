@@ -3,23 +3,34 @@
 #include "../Utils/StateMachine.h"
 
 enum class GameState {
-    NewRound,
-    StartLeft,
-    StartRight,
-    ToLeft,
-    ToRight,
+    New,
+    JoinedL,
+    JoinedR,
+    RoundStart,
+    ReadyL,
+    ReadyR,
+    ReadyBoth,
+    BallToL,
+    BallToR,
+    LeftR,
+    LeftL,
     End,
 };
 
 enum class GameEvent {
-    HitLeft,
-    HitRight,
-    MissLeft,
-    MissRight,
-    ReleaseLeft,
-    ReleaseRight,
-    EndGame,
-    NewRound,
+    JoinL,
+    JoinR,
+    ReadyL,
+    ReadyR,
+    ReleaseL,
+    ReleaseR,
+    HitL,
+    HitR,
+    MissL,
+    MissR,
+    LeaveL,
+    LeaveR,
+    End,
 };
 
 class GameStateMachine
