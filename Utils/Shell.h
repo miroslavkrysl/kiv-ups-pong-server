@@ -2,10 +2,9 @@
 
 #include <string>
 #include <vector>
-#include <istream>
-#include <ostream>
 #include <functional>
 #include <unordered_map>
+
 #include "Thread.h"
 
 class Server;
@@ -16,11 +15,9 @@ class Shell: public Thread
     std::ostream &output;
     Server &server;
 
-    const std::string HLINE{"------------------------------------------------------------"};
-
     typedef void (Shell::*Command)(std::vector<std::string>);
 
-    std::unordered_map<std::string, Command> actions{
+    std::unordered_map<std::string, Command> commands{
         {"exit", &Shell::cmdExit},
         {"games", &Shell::cmdGames},
         {"players", &Shell::cmdPlayers},
@@ -31,18 +28,18 @@ class Shell: public Thread
 
     void handle(std::string command);
 
-    void cmdExit(std::vector<std::string> arguments);
-    void cmdGames(std::vector<std::string> arguments);
-    void cmdPlayers(std::vector<std::string> arguments);
+    void cmdHelp(std::vector<std::string> arguments);
     void cmdInfo(std::vector<std::string> arguments);
     void cmdStats(std::vector<std::string> arguments);
-    void cmdHelp(std::vector<std::string> arguments);
+    void cmdPlayers(std::vector<std::string> arguments);
+    void cmdGames(std::vector<std::string> arguments);
+    void cmdExit(std::vector<std::string> arguments);
 
 public:
-    Shell(const std::istream &input, const std::ostream &output, Server &server);
+    explicit Shell(Server &server);
+
     void run() override;
     void after() override;
-    bool stop(bool wait) override;
 };
 
 class UnknownCommandException: public std::runtime_error

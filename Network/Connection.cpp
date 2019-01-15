@@ -27,14 +27,9 @@ Uid Connection::getUid()
     return uid;
 }
 
-std::string Connection::getUidStr(size_t fill)
+std::string Connection::getUidStr()
 {
-    std::string str = std::to_string(uid);
-
-    if (fill > str.size())
-        str.insert(str.size(), str.size() + fill - str.size(), ' ');
-
-    return str;
+    return std::to_string(uid);
 }
 
 std::string Connection::getNickname()
@@ -55,7 +50,6 @@ bool Connection::isClosed()
 void Connection::setMode(ConnectionMode mode)
 {
     timeval recvTimeout{};
-    timeval sendTimeout{};
 
     switch (mode) {
     case ConnectionMode::Idle: {
@@ -103,7 +97,7 @@ void Connection::before()
 
 void Connection::run()
 {
-    server.getLogger().log(getUidStr(6) + " - listening", Logger::Level::Success);
+    server.getLogger().log(Text::justifyL(getUidStr(), 6) + " - listening", Logger::Level::Success);
 
     char buffer[1024];
     std::string data;
@@ -125,7 +119,7 @@ void Connection::run()
                 if (inactive > inactiveTimeout) {
                     // inactive too long, probably dead
                     server.getLogger()
-                        .log(getUidStr(6) + " - inactive for too long - disconnecting",
+                        .log(Text::justifyL(getUidStr(), 6) + " - inactive for too long - disconnecting",
                              Logger::Level::Warning);
                     return;
                 }
@@ -142,7 +136,7 @@ void Connection::run()
             else {
                 // unrecoverable error
                 server.getLogger()
-                    .log(getUidStr(6) + " - error while receiving: " + std::string{strerror(errno)},
+                    .log(Text::justifyL(getUidStr(), 6) + " - error while receiving: " + std::string{strerror(errno)},
                          Logger::Level::Error);
                 return;
             }
@@ -151,7 +145,7 @@ void Connection::run()
         if (bytesRead == 0) {
             // player orderly disconnected
             server.getLogger()
-                .log(getUidStr(6) + " - orderly disconnected");
+                .log(Text::justifyL(getUidStr(), 6) + " - orderly disconnected");
             return;
         }
 
@@ -193,7 +187,7 @@ void Connection::run()
                 }
                 catch (...) {
                     server.getLogger()
-                        .log(getUidStr(6) + " - unrecoverable error - disconnecting: ",
+                        .log(Text::justifyL(getUidStr(), 6) + " - unrecoverable error - disconnecting: ",
                              Logger::Level::Error);
                     stop(false);
                     break;
@@ -218,7 +212,7 @@ void Connection::run()
         if (corruptedPackets > CORRUPTED_PACKETS_LIMIT) {
             // connection probably corrupted
             server.getLogger()
-                .log(getUidStr(6) + " - too much corrupted data received - disconnecting",
+                .log(Text::justifyL(getUidStr(), 6) + " - too much corrupted data received - disconnecting",
                      Logger::Level::Error);
             break;
         }
@@ -236,7 +230,7 @@ void Connection::after()
 {
     ::close(socket);
     socket = -1;
-    server.getLogger().log(getUidStr(6) + " - connection closed", Logger::Level::Warning);
+    server.getLogger().log(Text::justifyL(getUidStr(), 6) + " - connection closed", Logger::Level::Warning);
 }
 
 void Connection::handlePacket(Packet packet)

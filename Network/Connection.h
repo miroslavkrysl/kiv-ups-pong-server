@@ -10,7 +10,6 @@
 class Server;
 
 typedef int32_t Uid;
-typedef void (Connection::*PacketHandler)(Packet);
 
 enum class ConnectionMode
 {
@@ -26,6 +25,8 @@ class Connection: public Thread
     const timeval RECV_TIMEOUT_BUSY{2, 0};
     const timeval SEND_TIMEOUT{1, 0};
     const int CORRUPTED_PACKETS_LIMIT{5};
+
+    typedef void (Connection::*PacketHandler)(Packet);
 
     const std::unordered_map<std::string, PacketHandler> PACKET_HANDLERS{
         // connection test
@@ -77,7 +78,7 @@ public:
     Connection(const Connection &connection) = delete;
 
     Uid getUid();
-    std::string getUidStr(size_t fill = 0);
+    std::string getUidStr();
     std::string getNickname();
     bool isIdentified();
     bool isClosed();

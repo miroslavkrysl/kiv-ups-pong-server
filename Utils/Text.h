@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string>
 
-class Decor
+class Text
 {
 public:
     static const int8_t FG_BLACK = 30;
@@ -35,11 +35,12 @@ public:
     static const int8_t RESET_UNDERLINE = 24;
     static const int8_t RESET_INVERSE = 27;
 
-    int8_t code;
+    static const char HORIZONTAL_LINE_CHAR{'-'};
 
-    Decor();
-    explicit Decor(int8_t code);
-    friend std::ostream& operator<<(std::ostream &out, const Decor &text);
+    static std::string decor(int8_t code = RESET_ALL);
+    static std::string hline(uint16_t width = 50, char lineChar = HORIZONTAL_LINE_CHAR);
+    static std::string justifyL(std::string string, uint16_t width, char fillChar = ' ');
+    static std::string justifyR(std::string string, uint16_t width, char fillChar = ' ');
 };
 
 

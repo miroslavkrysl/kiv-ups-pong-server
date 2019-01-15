@@ -1,5 +1,23 @@
 #include "StateMachine.h"
 
+int StateMachine::getCurrentState()
+{
+    if (transitions.empty()) {
+        throw StateMachineException("state machine has no states");
+    }
+    return currentState;
+}
+
+void StateMachine::setCurrentState(int state)
+{
+    auto s = transitions.find(state);
+    if (s == transitions.end()) {
+        throw StateMachineException("start state " + std::to_string(state) + " not exists");
+    }
+
+    currentState = state;
+}
+
 void StateMachine::addState(int state)
 {
     if (transitions.empty()) {
@@ -30,24 +48,6 @@ void StateMachine::addTransition(int startState, int endState, int input)
         throw StateMachineException("transition " + std::to_string(startState) + " | " + std::to_string(input) + " -> "
                                         + std::to_string(endState) + " already exists");
     }
-}
-
-void StateMachine::setCurrentState(int state)
-{
-    auto s = transitions.find(state);
-    if (s == transitions.end()) {
-        throw StateMachineException("start state " + std::to_string(state) + " not exists");
-    }
-
-    currentState = state;
-}
-
-int StateMachine::getCurrentState()
-{
-    if (transitions.empty()) {
-        throw StateMachineException("state machine has no states");
-    }
-    return currentState;
 }
 
 void StateMachine::doTransition(int input)

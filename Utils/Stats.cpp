@@ -9,8 +9,7 @@ Stats::Stats()
       bytesReceived{0},
       bytesDropped{0},
       messagesSent{0},
-      bytesSent{0},
-      changed{true}
+      bytesSent{0}
 {}
 
 void Stats::setStarted(std::chrono::system_clock::time_point started)
@@ -56,6 +55,13 @@ void Stats::addBytesSent(uint64_t count)
 
 std::string Stats::toLogString()
 {
+    std::unique_lock<std::mutex> lock1{packetsReceivedMutex};
+    std::unique_lock<std::mutex> lock2{packetsDroppedMutex};
+    std::unique_lock<std::mutex> lock3{bytesReceivedMutex};
+    std::unique_lock<std::mutex> lock4{bytesDroppedMutex};
+    std::unique_lock<std::mutex> lock5{packetsSentMutex};
+    std::unique_lock<std::mutex> lock6{bytesSentMutex};
+
     auto now = std::chrono::system_clock::now();
     std::time_t startTime = std::chrono::system_clock::to_time_t(started);
     auto upTime = now - started;
@@ -78,13 +84,4 @@ std::string Stats::toLogString()
     stream << "Bytes dropped: " << messagesDropped;
 
     return stream.str();
-}
-
-bool Stats::hasChanged()
-{
-    if (changed) {
-        changed = false;
-        return true;
-    }
-    return false;
 }

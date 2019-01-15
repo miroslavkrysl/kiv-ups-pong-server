@@ -9,6 +9,12 @@ Thread::~Thread()
     stop(true);
 }
 
+void Thread::execute()
+{
+    run();
+    after();
+}
+
 bool Thread::start()
 {
     if (thread.joinable()) {
@@ -22,6 +28,9 @@ bool Thread::start()
 
     return true;
 }
+
+void Thread::before()
+{}
 
 bool Thread::stop(bool wait)
 {
@@ -37,6 +46,9 @@ bool Thread::stop(bool wait)
 
     return true;
 }
+
+void Thread::after()
+{}
 
 bool Thread::join()
 {
@@ -71,16 +83,4 @@ bool Thread::shouldStop()
 bool Thread::isRunning()
 {
     return thread.joinable();
-}
-
-void Thread::before()
-{}
-
-void Thread::after()
-{}
-
-void Thread::execute()
-{
-    run();
-    after();
 }

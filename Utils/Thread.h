@@ -10,6 +10,7 @@ class Thread
     bool terminate;
 
     void execute();
+
 public:
     Thread();
     virtual ~Thread();
@@ -17,8 +18,8 @@ public:
     virtual bool start();
     virtual void before();
     virtual void run() = 0;
-    virtual void after();
     virtual bool stop(bool wait);
+    virtual void after();
 
     virtual bool join() final;
     virtual bool detach() final;

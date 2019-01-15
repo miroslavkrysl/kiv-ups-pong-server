@@ -11,7 +11,7 @@ Server::Server(uint16_t port, std::string ipAddress)
       port{port},
       ipString{ipAddress},
       logger{"server.log", "communication.log", "stats.log"},
-      shell{std::cin, std::cout, *this}
+      shell{*this}
 {
     // set up address structure
     memset(&address, 0, sizeof(address));
@@ -48,11 +48,11 @@ sockaddr_in &Server::getAddress()
 
 void Server::addNickname(std::string nickname)
 {
-    nicknamesMutex.lock();
+    std::unique_lock<std::mutex> lock{nicknamesMutex};
 
     auto inserted = nicknames.insert(nickname);
 
-    nicknamesMutex.unlock();
+    lock.unlock();
 
     if (!inserted.second) {
         throw ServerException("nickname " + nickname + " already exists");
@@ -61,14 +61,14 @@ void Server::addNickname(std::string nickname)
 
 Connection &Server::addConnection(int socket, sockaddr_in address)
 {
-    connectionsMutex.lock();
+    std::unique_lock<std::mutex> lock(connectionsMutex);
 
     Uid uid = lastUid++;
 
     auto connectionPtr = std::make_unique<Connection>(uid, socket, address, *this);
     auto inserted = connections.insert(std::make_pair(uid, std::move(connectionPtr)));
 
-    connectionsMutex.unlock();
+    lock.unlock();
 
     Connection &connection = (*inserted.first->second);
     connection.start();
@@ -80,7 +80,7 @@ size_t Server::clearClosedConnections()
 {
     size_t count{0};
 
-    connectionsMutex.lock();
+    std::unique_lock<std::mutex> lock{connectionsMutex};
 
     auto connectionsIt = connections.begin();
     while (connectionsIt != connections.end()) {
@@ -94,7 +94,7 @@ size_t Server::clearClosedConnections()
         }
     }
 
-    connectionsMutex.unlock();
+    lock.unlock();
 
     return count;
 }
@@ -103,14 +103,14 @@ size_t Server::forEachConnection(std::function<void(Connection &)> function)
 {
     size_t count{0};
 
-    connectionsMutex.lock();
+    std::unique_lock<std::mutex> lock{connectionsMutex};
 
     for (auto &uidConnectionPair : connections) {
         function(*uidConnectionPair.second);
         count++;
     }
 
-    connectionsMutex.unlock();
+    lock.unlock();
 
     return count;
 }
@@ -119,7 +119,7 @@ Game &Server::joinPublic(Connection &connection)
 {
     Game *game;
 
-    publicGamesMutex.lock();
+    std::unique_lock<std::mutex> lock{publicGamesMutex};
 
     if (publicGames.back()->isNew()) {
         game = publicGames.back().get();
@@ -132,14 +132,14 @@ Game &Server::joinPublic(Connection &connection)
 
     game->addPlayer(connection);
 
-    publicGamesMutex.unlock();
+    lock.unlock();
 
     return *game;
 }
 
 Game &Server::createPrivate(Connection &connection)
 {
-    privateGamesMutex.lock();
+    std::unique_lock<std::mutex> lock{privateGamesMutex};
 
     auto gamePtr = std::make_unique<Game>();
     auto inserted = privateGames.insert(std::make_pair(connection.getNickname(), std::move(gamePtr)));
@@ -151,14 +151,14 @@ Game &Server::createPrivate(Connection &connection)
     Game &game = *inserted.first->second;
     game.addPlayer(connection);
 
-    privateGamesMutex.unlock();
+    lock.unlock();
 
     return game;
 }
 
 Game &Server::joinPrivate(Connection &connection, std::string opponent)
 {
-    privateGamesMutex.lock();
+    std::unique_lock<std::mutex> lock{privateGamesMutex};
 
     auto found = privateGames.find(opponent);
 
@@ -169,7 +169,7 @@ Game &Server::joinPrivate(Connection &connection, std::string opponent)
     Game &game = *found->second;
     game.addPlayer(connection);
 
-    privateGamesMutex.unlock();
+    lock.unlock();
 
     return game;
 }
@@ -178,7 +178,7 @@ size_t Server::clearEndedGames()
 {
     size_t count{0};
 
-    publicGamesMutex.lock();
+    std::unique_lock<std::mutex> lockPublic{publicGamesMutex};
 
     auto publicGamesIt = publicGames.begin();
     while (publicGamesIt != publicGames.end()) {
@@ -192,9 +192,9 @@ size_t Server::clearEndedGames()
         }
     }
 
-    publicGamesMutex.unlock();
+    lockPublic.unlock();
 
-    privateGamesMutex.lock();
+    std::unique_lock<std::mutex> lockPrivate{privateGamesMutex};
 
     auto privateGamesIt = privateGames.begin();
     while (privateGamesIt != privateGames.end()) {
@@ -208,7 +208,7 @@ size_t Server::clearEndedGames()
         }
     }
 
-    privateGamesMutex.unlock();
+    lockPrivate.unlock();
 
     return count;
 }
@@ -217,14 +217,14 @@ size_t Server::forEachPublicGame(std::function<void(Game &)> function)
 {
     size_t count{0};
 
-    publicGamesMutex.lock();
+    std::unique_lock<std::mutex> lock{publicGamesMutex};
 
     for (auto &game : publicGames) {
         function(*game);
         count++;
     }
 
-    publicGamesMutex.unlock();
+    lock.unlock();
 
     return count;
 }
@@ -233,14 +233,14 @@ size_t Server::forEachPrivateGame(std::function<void(Game &)> function)
 {
     size_t count{0};
 
-    privateGamesMutex.lock();
+    std::unique_lock<std::mutex> lock{privateGamesMutex};
 
     for (auto &ownerGamePair : privateGames) {
         function(*ownerGamePair.second);
         count++;
     }
 
-    privateGamesMutex.unlock();
+    lock.unlock();
 
     return count;
 }
@@ -262,9 +262,7 @@ void Server::run()
     // periodically do a cleanup and write stats
     while (!shouldStop()) {
 
-        if (stats.hasChanged()) {
-            logger.writeStats(stats);
-        }
+        logger.writeStats(stats);
 
         clearClosedConnections();
         clearEndedGames();
