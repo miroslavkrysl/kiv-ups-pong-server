@@ -1,23 +1,24 @@
 #pragma once
 
 #include "../Network/Connection.h"
+#include "PlayerState.h"
 
 class Player
 {
-    Connection &connection;
+    Connection *connection;
     PlayerState state;
-    Score score;
+    std::string nickname;
+    Side side;
 
 public:
-    explicit Player(Connection &connection);
+    Player(Connection *connection, Side side);
 
-    Connection &getConnection();
-
+    Connection *getConnection();
+    void setConnection(Connection *connection);
+    std::string getNickname();
+    Side getSide();
     const PlayerState &getState();
     void setState(const PlayerState &state);
-
-    Score getScore();
-    void setScore(Score score);
 };
 
 

@@ -1,13 +1,33 @@
 #include "Player.h"
 
-Player::Player(Connection &connection)
-    : connection{connection},
-      score{0}
-{}
-
-Connection &Player::getConnection()
+Player::Player(Connection *connection, Side side)
+    : side(side)
 {
-    return connection;
+    setConnection(connection);
+}
+
+Connection *Player::getConnection()
+{
+    return nullptr;
+}
+
+void Player::setConnection(Connection *connection)
+{
+    this->connection = connection;
+
+    if (this->connection) {
+        nickname = connection->getNickname();
+    }
+}
+
+std::string Player::getNickname()
+{
+    return nickname;
+}
+
+Side Player::getSide()
+{
+    return side;
 }
 
 const PlayerState &Player::getState()
@@ -17,14 +37,5 @@ const PlayerState &Player::getState()
 
 void Player::setState(const PlayerState &state)
 {
-
-}
-
-Score Player::getScore()
-{
-    return 0;
-}
-void Player::setScore(Score score)
-{
-
+    this->state = state;
 }
