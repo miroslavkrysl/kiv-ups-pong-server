@@ -5,39 +5,14 @@ bool isValidTimestamp(unsigned long timestamp)
     return timestamp <= TIMESTAMP_MAX;
 }
 
-bool isValidSide(Side direction)
-{
-    return true;
-}
-
-bool isValidSpeed(unsigned long speed)
-{
-    return speed <= BALL_SPEED_MAX && speed >= BALL_SPEED_MIN;;
-}
-
-bool isValidScore(unsigned long score)
-{
-    return score <= MAX_SCORE;
-}
-
 bool isValidPlayerPosition(int position)
 {
     return position <= PLAYER_POSITION_MAX && position >= PLAYER_POSITION_MIN;
 }
 
-bool isValidDirection(Direction direction)
+bool isValidPlayerDirection(PlayerDirection direction)
 {
     return true;
-}
-
-bool isValidBallPosition(int position)
-{
-    return position <= BALL_POSITION_MAX && position >= BALL_POSITION_MIN;
-}
-
-bool isValidAngle(int direction)
-{
-    return direction <= ANGLE_MAX && direction >= ANGLE_MIN;
 }
 
 Timestamp strToTimestamp(std::string &str)
@@ -58,57 +33,7 @@ Timestamp strToTimestamp(std::string &str)
     return static_cast<Timestamp>(timestamp);
 }
 
-Side strToSide(std::string &str)
-{
-    if (str == "left") {
-        return Side::Left;
-    }
-    else if (str == "right") {
-        return Side::Right;
-    }
-    else {
-        throw GameTypeException("side is in invalid format");
-    }
-}
-
-
-Speed strToSpeed(std::string &str)
-{
-    unsigned long speed;
-
-    try {
-        speed = std::stoul(str);
-
-        if (!isValidSpeed(speed)) {
-            throw std::exception{};
-        }
-    }
-    catch (...) {
-        throw GameTypeException("speed is in invalid format");
-    }
-
-    return static_cast<Speed>(speed);
-}
-
-Score strToScore(std::string &str)
-{
-    unsigned long score;
-
-    try {
-        score = std::stoul(str);
-
-        if (!isValidSpeed(score)) {
-            throw std::exception{};
-        }
-    }
-    catch (...) {
-        throw GameTypeException("score is in invalid format");
-    }
-
-    return static_cast<Score>(score);
-}
-
-PlayerPosition strToPlayerPosition(std::string &str)
+Position strToPlayerPosition(std::string &str)
 {
     int position;
 
@@ -123,59 +48,23 @@ PlayerPosition strToPlayerPosition(std::string &str)
         throw GameTypeException("player position is in invalid format");
     }
 
-    return static_cast<PlayerPosition>(position);
+    return static_cast<Position>(position);
 }
 
-Direction strToDirection(std::string &str)
+PlayerDirection strToPlayerDirection(std::string &str)
 {
     if (str == "up") {
-        return Direction::Up;
+        return PlayerDirection::Up;
     }
     else if (str == "down") {
-        return Direction::Down;
+        return PlayerDirection::Down;
     }
     else if (str == "stop") {
-        return Direction::Stop;
+        return PlayerDirection::Stop;
     }
     else {
         throw GameTypeException("direction is in invalid format");
     }
-}
-
-BallPosition strToBallPosition(std::string &str)
-{
-    int position;
-
-    try {
-        position = std::stoi(str);
-
-        if (!isValidBallPosition(position)) {
-            throw std::exception{};
-        }
-    }
-    catch (...) {
-        throw GameTypeException("ball position is in invalid format");
-    }
-
-    return static_cast<BallPosition>(position);
-}
-
-Angle strToBallAngle(std::string &str)
-{
-    int direction;
-
-    try {
-        direction = std::stoi(str);
-
-        if (!isValidAngle(direction)) {
-            throw std::exception{};
-        }
-    }
-    catch (...) {
-        throw GameTypeException("angle is in invalid format");
-    }
-
-    return static_cast<Angle>(direction);
 }
 
 std::string timestampToStr(Timestamp timestamp)
@@ -193,35 +82,36 @@ std::string scoreToStr(Score score)
     return std::to_string(score);
 }
 
-std::string playerPositionToStr(PlayerPosition playerPosition)
+std::string playerPositionToStr(Position position)
 {
-    return std::to_string(playerPosition);
+    return std::to_string(position);
 }
 
-std::string directionToStr(Direction playerDirection)
+std::string directionToStr(PlayerDirection direction)
 {
-    switch (playerDirection) {
-    case Direction::Up:return "up";
-    case Direction::Down:return "down";
-    case Direction::Stop:return "stop";
+    switch (direction) {
+    case PlayerDirection::Up:return "up";
+    case PlayerDirection::Down:return "down";
+    case PlayerDirection::Stop:return "stop";
     }
 }
 
-std::string ballPositionToStr(BallPosition ballPosition)
+std::string ballPositionToStr(Position position)
 {
-    return std::to_string(ballPosition);
+    return std::to_string(position);
 }
 
-std::string angleToStr(Angle ballDirection)
+std::string angleToStr(Angle angle)
 {
-    return std::to_string(ballDirection);
+    return std::to_string(angle);
 }
 
 std::string sideToStr(Side side)
 {
     switch (side) {
-    case Side::Left:return "left";
-    case Side::Center:return "center";
-    case Side::Right:return "right";
+    case Side::Left:return "l";
+    case Side::CenterToLeft:return "cl";
+    case Side::CenterToRight:return "cr";
+    case Side::Right:return "r";
     }
 }

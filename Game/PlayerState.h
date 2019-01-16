@@ -5,7 +5,7 @@
 
 #include "GameTypes.h"
 
-enum class Direction;
+enum class PlayerDirection;
 
 class PlayerState
 {
@@ -14,21 +14,21 @@ public:
 
 private:
     Timestamp timestamp_;
-    PlayerPosition position_;
-    Direction direction_;
+    Position position_;
+    PlayerDirection direction_;
 
     void validate();
 
 public:
     PlayerState();
     explicit PlayerState(std::vector<std::string> items);
-    PlayerState(Timestamp timestamp, PlayerPosition position, Direction direction);
+    PlayerState(Timestamp timestamp, Position position, PlayerDirection direction);
 
-    Timestamp timestamp();
-    PlayerPosition position();
-    Direction direction();
+    Timestamp timestamp() const;
+    Position position() const;
+    PlayerDirection direction() const;
 
-    std::vector<std::string> itemize();
+    std::vector<std::string> itemize() const;
 };
 
 

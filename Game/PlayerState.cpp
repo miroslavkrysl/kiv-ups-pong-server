@@ -8,7 +8,7 @@ void PlayerState::validate()
     if (!isValidPlayerPosition(position_)) {
         throw GameTypeException("player position is invalid");
     }
-    if (!isValidDirection(direction_)) {
+    if (!isValidPlayerDirection(direction_)) {
         throw GameTypeException("player direction is invalid");
     }
 }
@@ -16,18 +16,14 @@ void PlayerState::validate()
 PlayerState::PlayerState()
     : timestamp_{0},
       position_{0},
-      direction_{Direction::Stop}
-{
-    validate();
-}
+      direction_{PlayerDirection::Stop}
+{}
 
-PlayerState::PlayerState(Timestamp timestamp, PlayerPosition position, Direction direction)
+PlayerState::PlayerState(Timestamp timestamp, Position position, PlayerDirection direction)
     : timestamp_{timestamp},
       position_{position},
       direction_{direction}
-{
-    validate();
-}
+{}
 
 PlayerState::PlayerState(std::vector<std::string> items)
 {
@@ -37,27 +33,27 @@ PlayerState::PlayerState(std::vector<std::string> items)
 
     timestamp_ = strToTimestamp(items[0]);
     position_ = strToPlayerPosition(items[1]);
-    direction_ = strToDirection(items[2]);
+    direction_ = strToPlayerDirection(items[2]);
 
     validate();
 }
 
-Timestamp PlayerState::timestamp()
+Timestamp PlayerState::timestamp() const
 {
     return timestamp_;
 }
 
-PlayerPosition PlayerState::position()
+Position PlayerState::position() const
 {
     return position_;
 }
 
-Direction PlayerState::direction()
+PlayerDirection PlayerState::direction() const
 {
     return direction_;
 }
 
-std::vector<std::string> PlayerState::itemize()
+std::vector<std::string> PlayerState::itemize() const
 {
     return {
         timestampToStr(timestamp_),

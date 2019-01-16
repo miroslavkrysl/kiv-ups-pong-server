@@ -9,30 +9,23 @@ class Game;
 
 class BallState
 {
-public:
-    static const size_t ITEMS_COUNT{5};
-
 private:
     Timestamp timestamp_;
     Side side_;
-    BallPosition position_;
+    Position position_;
     Angle angle_;
     Speed speed_;
 
-    void validate();
-
 public:
-    BallState();
-    BallState(Timestamp timestamp, Side side, BallPosition position, Angle direction, Speed speed);
-    explicit BallState(std::vector<std::string> items);
+    BallState(Timestamp timestamp, Side side, Position position, Angle direction, Speed speed);
 
-    Timestamp timestamp();
-    Side side();
-    BallPosition position();
-    Angle angle();
-    Speed speed();
+    Timestamp timestamp() const;
+    Side side() const;
+    Position position() const;
+    Angle angle() const;
+    Speed speed() const;
 
-    std::vector<std::string> itemize();
+    std::vector<std::string> itemize() const;
 };
 
 
