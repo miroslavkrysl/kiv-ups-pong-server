@@ -6,6 +6,7 @@
 #include "Shell.h"
 #include "Text.h"
 #include "../Network/Server.h"
+#include "../Game/Game.h"
 
 Shell::Shell(Server &server)
     : input(std::cin),
@@ -136,29 +137,35 @@ void Shell::cmdGames(std::vector<std::string> arguments)
     output << "Private games:" << std::endl << std::endl;
 
     size_t countPrivate = server.forEachPrivateGame([&output, &pending](Game &game){
-        auto nicknames = game.getNicknames();
+        auto players = game.getPlayers();
 
-        if (game.isNew()) {
-            pending.insert(nicknames.first);
+        if (!game.hasBothPlayers()) {
+            pending.emplace_back(players.first->getNickname());
             return;
         }
 
         output << "- "
-               << Text::justifyR(nicknames.first, 16) << " vs. " << Text::justifyR(nicknames.second, 16) << std::endl;
+            << Text::justifyR(players.first->getNickname(), 16)
+            << " vs. "
+            << Text::justifyR(players.first->getNickname(), 16)
+            << std::endl;
     });
 
     output << "Public games:" << std::endl << std::endl;
 
     size_t countPublic = server.forEachPublicGame([&output, &pending](Game &game){
-        auto nicknames = game.getNicknames();
+        auto players = game.getPlayers();
 
-        if (game.isNew()) {
-            pending.insert(nicknames.first);
+        if (!game.hasBothPlayers()) {
+            pending.emplace_back(players.first->getNickname());
             return;
         }
 
         output << "- "
-            << Text::justifyR(nicknames.first, 16) << " vs. " << Text::justifyR(nicknames.second, 16) << std::endl;
+            << Text::justifyR(players.first->getNickname(), 16)
+            << " vs. "
+            << Text::justifyR(players.second->getNickname(), 16)
+            << std::endl;
     });
 
     output << "Pending:" << std::endl << std::endl;

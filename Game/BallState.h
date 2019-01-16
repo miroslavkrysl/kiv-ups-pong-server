@@ -17,6 +17,7 @@ private:
     Speed speed_;
 
 public:
+    BallState() = default;
     BallState(Timestamp timestamp, Side side, Position position, Angle direction, Speed speed);
 
     Timestamp timestamp() const;

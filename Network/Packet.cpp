@@ -17,9 +17,6 @@ Packet Packet::parse(const std::string &contents)
         tokens.push_back(token);
     }
 
-    // erase existing items and fill with parsed
-    clear();
-
     // first token is token type name
     std::string type = tokens.front();
     tokens.erase(tokens.begin());
@@ -75,6 +72,13 @@ void Packet::clear()
 void Packet::addItem(std::string item)
 {
     items.push_back(item);
+}
+
+void Packet::addItems(std::vector<std::string> items)
+{
+    for (auto &item : items) {
+        this->items.push_back(item);
+    }
 }
 
 void Packet::setType(std::string type)

@@ -6,6 +6,8 @@
 #include "Connection.h"
 #include "Packet.h"
 #include "Server.h"
+#include "../Utils/Text.h"
+#include "../Game/Game.h"
 
 Connection::Connection(Uid uid, int socket, sockaddr_in address, Server &server)
     : uid{uid},
@@ -35,6 +37,11 @@ std::string Connection::getUidStr()
 std::string Connection::getNickname()
 {
     return nickname;
+}
+
+std::string Connection::getIp()
+{
+    return ip;
 }
 
 bool Connection::isIdentified()
@@ -77,7 +84,7 @@ void Connection::send(Packet &packet)
 
     ssize_t sentBytes = ::send(socket, contents.c_str(), contents.length(), 0);
 
-    if (sentBytes == 0) {
+    if (sentBytes != 0) {
         // success
         server.getStats().addPacketsSent(1);
         server.getStats().addBytesSent(static_cast<uint64_t>(sentBytes));
@@ -293,133 +300,102 @@ void Connection::handleLogin(Packet packet)
 
 void Connection::handleJoinRandomGame(Packet packet)
 {
-//    if (game) {
-//        throw NonContextualPacketException{"already in a game"};
-//    }
-//
-//    if (!isIdentified()) {
-//        throw NonContextualPacketException{"not logged"};
-//    }
+    if (game) {
+        throw NonContextualPacketException{"already in a game"};
+    }
 
+    if (!isIdentified()) {
+        throw NonContextualPacketException{"not logged"};
+    }
 
-    // TODO: handle join random game
+    game = &server.joinPublic(*this);
 }
 
 void Connection::handleJoinPrivateGame(Packet packet)
 {
-//    if (game) {
-//        throw NonContextualPacketException{"already in a game"};
-//    }
-//
-//    if (!isIdentified()) {
-//        throw NonContextualPacketException{"not logged"};
-//    }
+    if (game) {
+        throw NonContextualPacketException{"already in a game"};
+    }
 
-    // TODO: handle join private game
+    if (!isIdentified()) {
+        throw NonContextualPacketException{"not logged"};
+    }
+
+    auto items = packet.getItems();
+
+    if (items.size() != 1) {
+        throw MalformedPacketException{"private game owner nickname missing"};
+    }
+
+    game = &server.joinPrivate(*this, items[0]);
 }
 
 void Connection::handleCreatePrivateGame(Packet packet)
 {
-    // TODO: handle crate private game
+    if (game) {
+        throw NonContextualPacketException{"already in a game"};
+    }
+
+    if (!isIdentified()) {
+        throw NonContextualPacketException{"not logged"};
+    }
+
+    game = &server.createPrivate(*this);
 }
 
 void Connection::handleLeaveGame(Packet packet)
 {
-    // TODO: handle leave
+    if (!game) {
+        throw NonContextualPacketException{"already in a game"};
+    }
+
+    game->pushEvent(std::make_unique<EventPlayerLeft>(game->getPlayer(*this)));
+
+    game = nullptr;
 }
 
 void Connection::handleGetTime(Packet packet)
 {
-    // TODO: handle get time
+    if (!game) {
+        throw NonContextualPacketException{"already in a game"};
+    }
+
+    Packet response{"time"};
+    packet.addItem(timestampToStr(game->getTime()));
+
+    send(response);
 }
 
 void Connection::handleReady(Packet packet)
 {
-    // TODO: handle ready
+    if (!game) {
+        throw NonContextualPacketException{"already in a game"};
+    }
+
+    game->pushEvent(std::make_unique<EventPlayerReady>(game->getPlayer(*this)));
+}
+
+void Connection::handleRestart(Packet packet)
+{
+    if (!game) {
+        throw NonContextualPacketException{"already in a game"};
+    }
+
+    game->pushEvent(std::make_unique<EventRestart>(game->getPlayer(*this)));
 }
 
 void Connection::handleUpdateState(Packet packet)
 {
-//    if (!game) {
-//        throw NonContextualPacketException{"not in a game"};
-//    }
-//
-//    try {
-//        PlayerState state{packet.getItems()};
-//        game->updatePlayerState(nickname, state);
-//
-//        std::list<std::string> items;
-//        state.itemize(items);
-//
-//        Packet forOpponent{"update_opponent", items};
-//    }
-//    catch (GameTypeException &exception) {
-//        throw MalformedPacketException{exception.what()};
-//    }
-//    catch (GamePlayException &exception) {
-//        throw InvalidPacketException{exception.what()};
-//    }
-    // TODO: handle update state
-}
+    if (!game) {
+        throw NonContextualPacketException{"not in a game"};
+    }
 
-void Connection::handleBallHit(Packet packet)
-{
-//    if (!game) {
-//        throw NonContextualPacketException{"not in a game"};
-//    }
-//
-//    if (packet.getItems().size() != PlayerState::ITEMS_COUNT + BallState::ITEMS_COUNT) {
-//        throw MalformedPacketException{"too few items in the packet"};
-//    }
-//
-//    try {
-//        // extract items from packet
-//        std::list<std::string> packetItems = packet.getItems();
-//
-//        auto it = packetItems.begin();
-//        std::advance(it, PlayerState::ITEMS_COUNT - 1);
-//
-//        std::list<std::string> playerItems{packetItems.begin(), it};
-//        std::list<std::string> ballItems{packetItems.begin(), packetItems.end()};
-//
-//
-//        // create player and ball states from items and update game
-//        PlayerState playerState{playerItems};
-//        game->updatePlayerState(nickname, playerState);
-//
-//        BallState ballState{ballItems};
-//        game->ballHit(nickname, ballState);
-//
-//
-//        // send responses
-//        std::list<std::string> items;
-//        Connection &opponent = server.getConnection(game->getOpponentNickname(nickname));
-//
-//        if (game->getState() == GameState::NewRound) {
-//            game->itemize(items);
-//            Packet response{"new_round", items};
-//
-//            send(response);
-//            opponent.send(response);
-//        }
-//        else if (game->getState() == GameState::End) {
-//            game->itemize(items);
-//            Packet response{"game_end", items};
-//
-//            send(response);
-//            opponent.send(response);
-//        }
-//        else {
-//            ballState.itemize(items);
-//            Packet forOpponent{"ball_hit", items};
-//            opponent.send(forOpponent);
-//        }
-//    }
-//    catch (GameTypeException &exception) {
-//        throw MalformedPacketException{exception.what()};
-//    }
-//    catch (GamePlayException &exception) {
-//        throw InvalidPacketException{exception.what()};
-//    }
-    // TODO: handle ball hit
+    try {
+        PlayerState state{packet.getItems()};
+
+        game->pushEvent(std::make_unique<EventPlayerUpdate>(game->getPlayer(*this), state));
+    }
+    catch (GameTypeException &exception) {
+        throw MalformedPacketException{exception.what()};
+    }
 }

@@ -1,67 +1,88 @@
 #pragma once
 
-#include <array>
+#include <list>
 #include <chrono>
 #include <stdexcept>
 #include <mutex>
+#include <condition_variable>
+#include <random>
 
+#include "Events.h"
+#include "Player.h"
+#include "GameTypes.h"
 #include "BallState.h"
-#include "PlayerState.h"
-#include "GameStateMachine.h"
 
 class Connection;
 
-class Game
+typedef std::list<std::unique_ptr<Event>> EventsList;
+typedef std::pair<Player *, Packet> Message;
+
+class Game: public Thread
 {
-    GameStateMachine stateMachine;
-    BallState ballState;
-    PlayerState playerLeft;
-    PlayerState playerRight;
-    Score maxScore;
-    Side nextSide;
-    std::pair<std::string, std::string> nicknames;
-    std::pair<Score, Score> score;
-    std::pair<bool, bool> ready;
+    const std::chrono::seconds DEFAULT_UPDATE_PERIOD{10};
 
     const std::chrono::steady_clock::time_point startTime;
-    std::mutex mutex;
+    BallState ballState;
+    BallState futureBallState;
+    Score maxScore;
+    std::pair<Score, Score> score;
+    std::pair<Player, Player> players;
+    Player &servicePlayer;
+    bool isPlaying;
 
-    PlayerState &getPlayerState_(std::string nickname);
+    std::default_random_engine randomGenerator;
+    std::uniform_int_distribution<Angle> randomAngle{ANGLE_MIN, ANGLE_MAX};
+    std::uniform_int_distribution<Speed> randomSpeed{BALL_SPEED_MIN, BALL_SPEED_MAX};
 
-    PlayerState expectedPlayerState(PlayerState &state, Timestamp timestamp);
-    BallState expectedBallState(BallState &state);
-    bool canHit(std::string nickname, BallState &state);
+    EventsList events;
+    std::condition_variable eventHappenCV;
+    std::mutex eventHappenMutex;
+    std::mutex eventPushMutex;
+
+    std::list<Message> packetsToSend;
+
+    std::unique_ptr<EventsList> extractEvents();
+
+    void sendPackets();
+    std::chrono::steady_clock::time_point nextUpdateAt();
+
+    void handleEvent(Event *event);
+    void handleEvent(EventPlayerJoin event);
+    void handleEvent(EventPlayerUpdate event);
+    void handleEvent(EventPlayerReady event);
+    void handleEvent(EventPlayerLeft event);
+    void handleEvent(EventNewRound event);
+    void handleEvent(EventStartRound event);
+    void handleEvent(EventBall event);
+    void handleEvent(EventGameOver event);
+    void handleEvent(EventRestart event);
+    void handleEvent(EventEndGame event);
 
 public:
-    Game(std::string playerLeft, std::string playerRight);
+    explicit Game(Score maxScore = 15, Side firstPlayer = Side::Left);
 
-    PlayerState getPlayerState(std::string nickname);
-    PlayerState getOpponentState(std::string nickname);
-    BallState getBallState();
-    Side getPlayerSide(std::string nickname);
-    std::string getOpponentNickname(std::string nickname);
+    void pushEvent(std::unique_ptr<Event> event);
+    void pushPacket(Player &player, Packet packet);
+    void update();
+
     Timestamp getTime();
-    GameState getState();
-
-    void newRound();
-    void playerReady(const std::string &nickname);
-    void updatePlayerState(std::string nickname, PlayerState state);
-    void ballHit(std::string nickname, BallState ballState);
-
+    std::pair<Player *, Player *> getPlayers();
+    Player &getPlayer(Connection &connection);
+    Player &getOpponent(Player &player);
     bool isInPast(Timestamp timestamp);
+    bool hasBothPlayers();
 
-    void itemize(std::list<std::string> &destination);
+    PlayerState expectedPlayerState(const PlayerState &state, Timestamp timestamp);
+    BallState nextBallState(BallState &state);
+    bool canHit(const PlayerState &playerState, const BallState &BallState);
+    bool eventHappen();
+
+    void before() override;
+    void run() override;
+    void after() override;
 };
 
 class GameException: public std::runtime_error
 {
     using std::runtime_error::runtime_error;
 };
-
-class GamePlayException: public std::runtime_error
-{
-    using std::runtime_error::runtime_error;
-};
-
-
-

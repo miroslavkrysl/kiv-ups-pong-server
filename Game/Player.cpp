@@ -1,7 +1,9 @@
 #include "Player.h"
 
 Player::Player(Connection *connection, Side side)
-    : side(side)
+    : side(side),
+      ready(false),
+      restart(false)
 {
     setConnection(connection);
 }
@@ -38,4 +40,29 @@ const PlayerState &Player::getState()
 void Player::setState(const PlayerState &state)
 {
     this->state = state;
+}
+
+bool Player::isReady()
+{
+    return ready;
+}
+
+void Player::setReady(bool ready)
+{
+    this->ready = ready;
+}
+
+bool Player::isActive()
+{
+    return connection != nullptr;
+}
+
+bool Player::wantsRestart()
+{
+    return restart;
+}
+
+void Player::setRestart(bool restart)
+{
+    this->restart = restart;
 }

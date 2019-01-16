@@ -93,6 +93,7 @@ std::string directionToStr(PlayerDirection direction)
     case PlayerDirection::Up:return "up";
     case PlayerDirection::Down:return "down";
     case PlayerDirection::Stop:return "stop";
+    default: return "";
     }
 }
 
@@ -113,5 +114,6 @@ std::string sideToStr(Side side)
     case Side::CenterToLeft:return "cl";
     case Side::CenterToRight:return "cr";
     case Side::Right:return "r";
+    default: return "";
     }
 }

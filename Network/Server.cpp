@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "Server.h"
+#include "../Game/Game.h"
 #include "../Utils/Shell.h"
 
 Server::Server(uint16_t port, std::string ipAddress)
@@ -121,7 +122,7 @@ Game &Server::joinPublic(Connection &connection)
 
     std::unique_lock<std::mutex> lock{publicGamesMutex};
 
-    if (publicGames.back()->isNew()) {
+    if (publicGames.back()->hasBothPlayers()) {
         game = publicGames.back().get();
     }
     else {
@@ -130,7 +131,7 @@ Game &Server::joinPublic(Connection &connection)
         game = gamePtr.get();
     }
 
-    game->addPlayer(connection);
+    game->pushEvent(std::make_unique<EventPlayerJoin>(connection));
 
     lock.unlock();
 
@@ -149,7 +150,7 @@ Game &Server::createPrivate(Connection &connection)
     }
 
     Game &game = *inserted.first->second;
-    game.addPlayer(connection);
+    game.pushEvent(std::make_unique<EventPlayerJoin>(connection));
 
     lock.unlock();
 
@@ -167,7 +168,7 @@ Game &Server::joinPrivate(Connection &connection, std::string opponent)
     }
 
     Game &game = *found->second;
-    game.addPlayer(connection);
+    game.pushEvent(std::make_unique<EventPlayerJoin>(connection));
 
     lock.unlock();
 
@@ -183,7 +184,7 @@ size_t Server::clearEndedGames()
     auto publicGamesIt = publicGames.begin();
     while (publicGamesIt != publicGames.end()) {
 
-        if ((*publicGamesIt)->isEnded()) {
+        if ((*publicGamesIt)->isRunning()) {
             publicGamesIt = publicGames.erase(publicGamesIt);
             count++;
         }
@@ -199,7 +200,7 @@ size_t Server::clearEndedGames()
     auto privateGamesIt = privateGames.begin();
     while (privateGamesIt != privateGames.end()) {
 
-        if (privateGamesIt->second->isEnded()) {
+        if (privateGamesIt->second->isRunning()) {
             privateGamesIt = privateGames.erase(privateGamesIt);
             count++;
         }

@@ -32,7 +32,6 @@ Speed BallState::speed() const
 {
     return speed_;
 }
-
 std::vector<std::string> BallState::itemize() const
 {
     return {

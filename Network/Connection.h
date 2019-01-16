@@ -5,9 +5,9 @@
 
 #include "Packet.h"
 #include "../Utils/Thread.h"
-#include "../Game/Game.h"
 
 class Server;
+class Game;
 
 typedef int32_t Uid;
 
@@ -37,12 +37,12 @@ class Connection: public Thread
         {"join_random_game", &Connection::handleJoinRandomGame},
         {"join_private_game", &Connection::handleJoinPrivateGame},
         {"create_private_game", &Connection::handleCreatePrivateGame},
-        {"leave_game", &Connection::handleLeaveGame},
         // game
         {"get_time", &Connection::handleGetTime},
         {"ready", &Connection::handleReady},
+        {"restart", &Connection::handleRestart},
         {"update_state", &Connection::handleUpdateState},
-        {"ball_hit", &Connection::handleBallHit},
+        {"leave_game", &Connection::handleLeaveGame},
     };
 
     Server &server;
@@ -70,8 +70,8 @@ class Connection: public Thread
     void handleLeaveGame(Packet packet);
     void handleGetTime(Packet packet);
     void handleReady(Packet packet);
+    void handleRestart(Packet packet);
     void handleUpdateState(Packet packet);
-    void handleBallHit(Packet packet);
 
 public:
     Connection(Uid uid, int socket, sockaddr_in address, Server &server);
@@ -80,6 +80,7 @@ public:
     Uid getUid();
     std::string getUidStr();
     std::string getNickname();
+    std::string getIp();
     bool isIdentified();
     bool isClosed();
 

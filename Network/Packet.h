@@ -27,6 +27,7 @@ public:
     std::string serialize();
     void clear();
     void addItem(std::string item);
+    void addItems(std::vector<std::string> items);
     void setType(std::string type);
 
     std::string toLogString();

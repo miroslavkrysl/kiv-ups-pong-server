@@ -60,7 +60,6 @@ public:
 
     void before() override;
     void run() override;
-    bool stop(bool wait) override;
     void after() override;
 
     std::string toLogString();
