@@ -34,11 +34,11 @@ class Connection: public Thread
         {"poke_back", &Connection::handlePokeBack},
         // connection management
         {"login", &Connection::handleLogin},
-        {"join_random_game", &Connection::handleJoinRandomGame},
-        {"join_private_game", &Connection::handleJoinPrivateGame},
-        {"create_private_game", &Connection::handleCreatePrivateGame},
+        {"join_random", &Connection::handleJoinRandomGame},
+        {"join_private", &Connection::handleJoinPrivateGame},
+        {"create_private", &Connection::handleCreatePrivateGame},
         // game
-        {"get_time", &Connection::handleGetTime},
+        {"time", &Connection::handleGetTime},
         {"ready", &Connection::handleReady},
         {"restart", &Connection::handleRestart},
         {"update_state", &Connection::handleUpdateState},
@@ -83,6 +83,7 @@ public:
     std::string getIp();
     bool isIdentified();
     bool isClosed();
+    void setGame(Game *game);
 
     void send(Packet &packet);
 

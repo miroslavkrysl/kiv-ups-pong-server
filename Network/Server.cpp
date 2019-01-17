@@ -10,7 +10,6 @@
 Server::Server(uint16_t port, std::string ipAddress)
     : connectionAcceptor{*this},
       port{port},
-      ipString{ipAddress},
       logger{"server.log", "communication.log", "stats.log"},
       shell{*this}
 {
@@ -30,6 +29,11 @@ Server::Server(uint16_t port, std::string ipAddress)
             throw ServerException("server ip address is in wrong format");
         }
     }
+
+    char ipString[INET_ADDRSTRLEN];
+    ::inet_ntop(AF_INET, &(address.sin_addr), ipString, INET_ADDRSTRLEN);
+
+    this->ipString = ipString;
 }
 
 Stats &Server::getStats()
@@ -122,15 +126,16 @@ Game &Server::joinPublic(Connection &connection)
 
     std::unique_lock<std::mutex> lock{publicGamesMutex};
 
-    if (publicGames.back()->hasBothPlayers()) {
+    if (!publicGames.empty() && !publicGames.back()->hasBothPlayers()) {
         game = publicGames.back().get();
     }
     else {
-        auto gamePtr = std::make_unique<Game>();
-        publicGames.push_back(std::move(gamePtr));
+        auto gamePtr = std::make_unique<Game>(logger);
         game = gamePtr.get();
+        publicGames.push_back(std::move(gamePtr));
     }
 
+    game->start();
     game->pushEvent(std::make_unique<EventPlayerJoin>(connection));
 
     lock.unlock();
@@ -142,7 +147,7 @@ Game &Server::createPrivate(Connection &connection)
 {
     std::unique_lock<std::mutex> lock{privateGamesMutex};
 
-    auto gamePtr = std::make_unique<Game>();
+    auto gamePtr = std::make_unique<Game>(logger);
     auto inserted = privateGames.insert(std::make_pair(connection.getNickname(), std::move(gamePtr)));
 
     if (!inserted.second) {
@@ -150,6 +155,8 @@ Game &Server::createPrivate(Connection &connection)
     }
 
     Game &game = *inserted.first->second;
+
+    game.start();
     game.pushEvent(std::make_unique<EventPlayerJoin>(connection));
 
     lock.unlock();
@@ -183,8 +190,7 @@ size_t Server::clearEndedGames()
 
     auto publicGamesIt = publicGames.begin();
     while (publicGamesIt != publicGames.end()) {
-
-        if ((*publicGamesIt)->isRunning()) {
+        if (!(*publicGamesIt)->isRunning()) {
             publicGamesIt = publicGames.erase(publicGamesIt);
             count++;
         }
@@ -265,8 +271,8 @@ void Server::run()
 
         logger.writeStats(stats);
 
-        clearClosedConnections();
-        clearEndedGames();
+        size_t clearedConnections = clearClosedConnections();
+        size_t clearedGames = clearEndedGames();
 
         std::this_thread::sleep_for(RUN_LOOP_PERIOD);
     }

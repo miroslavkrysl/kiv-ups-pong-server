@@ -13,6 +13,7 @@
 #include "BallState.h"
 
 class Connection;
+class Logger;
 
 typedef std::list<std::unique_ptr<Event>> EventsList;
 typedef std::pair<Player *, Packet> Message;
@@ -22,12 +23,13 @@ class Game: public Thread
     const std::chrono::seconds DEFAULT_UPDATE_PERIOD{10};
 
     const std::chrono::steady_clock::time_point startTime;
+    Logger &logger;
     BallState ballState;
     BallState futureBallState;
     Score maxScore;
     std::pair<Score, Score> score;
     std::pair<Player, Player> players;
-    Player &servicePlayer;
+    Player *servicePlayer;
     bool isPlaying;
 
     std::default_random_engine randomGenerator;
@@ -59,7 +61,7 @@ class Game: public Thread
     void handleEvent(EventEndGame event);
 
 public:
-    explicit Game(Score maxScore = 15, Side firstPlayer = Side::Left);
+    explicit Game(Logger &logger, Score maxScore = 15, Side firstPlayer = Side::Left);
 
     void pushEvent(std::unique_ptr<Event> event);
     void pushPacket(Player &player, Packet packet);
@@ -79,7 +81,6 @@ public:
 
     void before() override;
     void run() override;
-    void after() override;
 };
 
 class GameException: public std::runtime_error

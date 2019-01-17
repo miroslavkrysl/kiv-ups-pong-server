@@ -1,33 +1,38 @@
 #include <math.h>
+
 #include "Game.h"
+#include "../Util/Logger.h"
 
 void Game::before()
 {
-
+    logger.log("new game started");
 }
 
 void Game::run()
 {
-    std::unique_lock<std::mutex> lockEventHappen(eventHappenMutex, std::defer_lock);
+    logger.log("before while");
 
     while (!shouldStop()) {
 
         update();
 
-        for (auto &event : *extractEvents()) {
+        auto evs = extractEvents();
+
+        for (auto &&event : *evs) {
             handleEvent(event.get());
         }
 
         sendPackets();
 
-        lockEventHappen.lock();
-        eventHappenCV.wait_until(lockEventHappen, nextUpdateAt(), [this]{ return eventHappen();});
-    }
-}
+        if (eventHappen() || shouldStop()) {
+            continue;
+        }
 
-void Game::after()
-{
-    Thread::after();
+        std::unique_lock<std::mutex> lock(eventPushMutex);
+        eventHappenCV.wait_until(lock, nextUpdateAt());
+    }
+
+    logger.log("after while");
 }
 
 void Game::pushEvent(std::unique_ptr<Event> event)
@@ -55,10 +60,12 @@ bool Game::eventHappen()
     return !events.empty();
 }
 
-Game::Game(Score maxScore, Side firstPlayer)
-    : maxScore{maxScore},
+Game::Game(Logger &logger, Score maxScore, Side firstPlayer)
+    : logger{logger},
+      maxScore{maxScore},
       players{std::make_pair(Player{nullptr, Side::Left}, Player{nullptr, Side::Right})},
-      servicePlayer{players.first},
+      servicePlayer{&players.first},
+      isPlaying{false},
       startTime{std::chrono::steady_clock::now()}
 {}
 
@@ -174,7 +181,7 @@ std::pair<Player *, Player *> Game::getPlayers()
 
 void Game::pushPacket(Player &player, Packet packet)
 {
-    packetsToSend.emplace_back(&player, std::move(packet));
+    packetsToSend.emplace_back(&player, packet);
 }
 
 void Game::handleEvent(Event *event)
@@ -182,33 +189,53 @@ void Game::handleEvent(Event *event)
     switch (event->getType()) {
     case EventType::PlayerJoin: {
         handleEvent(*dynamic_cast<EventPlayerJoin *>(event));
+        logger.log("handled EventPlayerJoin");
+        break;
     }
     case EventType::PlayerReady: {
         handleEvent(*dynamic_cast<EventPlayerReady *>(event));
+        logger.log("handled EventPlayerReady");
+        break;
     }
     case EventType::PlayerUpdate: {
         handleEvent(*dynamic_cast<EventPlayerUpdate *>(event));
+        logger.log("handled EventPlayerUpdate");
+        break;
     }
     case EventType::PlayerLeft: {
         handleEvent(*dynamic_cast<EventPlayerLeft *>(event));
+        logger.log("handled EventPlayerLeft");
+        break;
     }
     case EventType::NewRound: {
         handleEvent(*dynamic_cast<EventNewRound *>(event));
+        logger.log("handled EventNewRound");
+        break;
     }
     case EventType::StartRound: {
         handleEvent(*dynamic_cast<EventStartRound *>(event));
+        logger.log("handled EventStartRound");
+        break;
     }
     case EventType::Ball: {
         handleEvent(*dynamic_cast<EventBall *>(event));
+        logger.log("handled EventBall");
+        break;
     }
     case EventType::GameOver: {
         handleEvent(*dynamic_cast<EventGameOver *>(event));
+        logger.log("handled EventGameOver");
+        break;
     }
     case EventType::Restart: {
         handleEvent(*dynamic_cast<EventRestart *>(event));
+        logger.log("handled EventRestart");
+        break;
     }
     case EventType::EndGame: {
         handleEvent(*dynamic_cast<EventEndGame *>(event));
+        logger.log("handled EventEndGame");
+        break;
     }
     }
 }
@@ -225,13 +252,15 @@ void Game::handleEvent(EventPlayerJoin event)
         pushPacket(players.first, packet1);
         pushPacket(players.second, packet2);
     }
-    if (!players.second.isActive()) {
-        players.first.setConnection(&event.connection);
-        packet1.addItem(sideToStr(Side::Left));
+    else if (!players.second.isActive()) {
+        players.second.setConnection(&event.connection);
+        packet1.addItem(sideToStr(Side::Right));
 
         pushPacket(players.second, packet1);
         pushPacket(players.first, packet2);
     }
+
+    event.connection.setGame(this);
 }
 
 void Game::handleEvent(EventPlayerUpdate event)
@@ -266,7 +295,7 @@ void Game::handleEvent(EventPlayerReady event)
     Packet packet{"opponent_ready"};
     pushPacket(getOpponent(event.player), packet);
 
-    if (players.first.isReady() || players.second.isReady()) {
+    if (players.first.isReady() && players.second.isReady()) {
         pushEvent(std::make_unique<EventStartRound>());
     }
 }
@@ -289,7 +318,7 @@ void Game::handleEvent(EventBall event)
     if (ballState.side() == Side::Left) {
         if (!canHit(players.first.getState(), ballState)) {
             score.second += 1;
-            servicePlayer = players.second;
+            servicePlayer = &players.second;
 
             if (score.second == maxScore) {
                 pushEvent(std::make_unique<EventGameOver>());
@@ -303,7 +332,7 @@ void Game::handleEvent(EventBall event)
     else {
         if (!canHit(players.second.getState(), ballState)) {
             score.first += 1;
-            servicePlayer = players.first;
+            servicePlayer = &players.first;
 
             if (score.first == maxScore) {
                 pushEvent(std::make_unique<EventGameOver>());
@@ -328,7 +357,11 @@ void Game::handleEvent(EventBall event)
 void Game::handleEvent(EventNewRound event)
 {
     isPlaying = false;
+    players.first.setReady(false);
+    players.second.setReady(false);
+
     Packet packet{"new_round"};
+
     packet.addItem(timestampToStr(getTime()));
     packet.addItem(scoreToStr(score.first));
     packet.addItem(scoreToStr(score.second));
@@ -350,6 +383,13 @@ void Game::handleEvent(EventGameOver event)
 
 void Game::handleEvent(EventEndGame event)
 {
+    if (players.first.isActive()) {
+        players.first.getConnection()->setGame(nullptr);
+    }
+    if (players.second.isActive()) {
+        players.second.getConnection()->setGame(nullptr);
+    }
+
     players.first.setConnection(nullptr);
     players.second.setConnection(nullptr);
 
@@ -361,7 +401,7 @@ Player &Game::getOpponent(Player &player)
     if (players.first.getSide() == player.getSide()) {
         return players.second;
     }
-    else if (players.second.getSide() != player.getSide()) {
+    else if (players.second.getSide() == player.getSide()) {
         return players.first;
     }
 
@@ -372,7 +412,7 @@ void Game::handleEvent(EventStartRound event)
 {
     ballState = BallState{
         getTime() + START_DELAY,
-        servicePlayer.getSide() == Side::Left ? Side::CenterToLeft : Side::CenterToRight,
+        servicePlayer->getSide() == Side::Left ? Side::CenterToLeft : Side::CenterToRight,
         0,
         0,
         BALL_SPEED_MIN
@@ -411,7 +451,7 @@ std::chrono::steady_clock::time_point Game::nextUpdateAt()
     if (isPlaying) {
         return now + std::chrono::milliseconds{futureBallState.timestamp() - getTime()};
     }
-
+    logger.log("default_update");
     return now + DEFAULT_UPDATE_PERIOD;
 }
 
@@ -422,10 +462,14 @@ bool Game::hasBothPlayers()
 
 Player &Game::getPlayer(Connection &connection)
 {
+    logger.log("first");
+    logger.log("gc: " + std::to_string(players.first.getConnection() == nullptr));
+    logger.log("uid1: " + std::to_string(players.first.getConnection()->getUid()));
+    logger.log("uid: " + std::to_string(connection.getUid()));
     if (players.first.getConnection() && players.first.getConnection()->getUid() == connection.getUid()) {
         return players.first;
     }
-    else if (players.first.getConnection() && players.first.getConnection()->getUid() == connection.getUid()) {
+    else if (players.second.getConnection() && players.second.getConnection()->getUid() == connection.getUid()) {
         return players.second;
     }
 

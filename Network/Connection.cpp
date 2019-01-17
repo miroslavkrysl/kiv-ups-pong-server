@@ -54,6 +54,11 @@ bool Connection::isClosed()
     return socket == -1;
 }
 
+void Connection::setGame(Game *game)
+{
+    this->game = game;
+}
+
 void Connection::setMode(ConnectionMode mode)
 {
     timeval recvTimeout{};
@@ -190,11 +195,13 @@ void Connection::run()
                 }
                 catch (PacketException &exception) {
                     server.getStats().addPacketsDropped(1);
+                    server.getLogger().log(Text::justifyL(getUidStr(), 6) + " - exception: " + exception.what(),
+                         Logger::Level::Error);
                     corruptedPackets++;
                 }
-                catch (...) {
+                catch (std::exception &e) {
                     server.getLogger()
-                        .log(Text::justifyL(getUidStr(), 6) + " - unrecoverable error - disconnecting: ",
+                        .log(Text::justifyL(getUidStr(), 6) + " - unrecoverable error - disconnecting: " + e.what(),
                              Logger::Level::Error);
                     stop(false);
                     break;
@@ -308,7 +315,7 @@ void Connection::handleJoinRandomGame(Packet packet)
         throw NonContextualPacketException{"not logged"};
     }
 
-    game = &server.joinPublic(*this);
+    server.joinPublic(*this);
 }
 
 void Connection::handleJoinPrivateGame(Packet packet)
@@ -327,7 +334,15 @@ void Connection::handleJoinPrivateGame(Packet packet)
         throw MalformedPacketException{"private game owner nickname missing"};
     }
 
-    game = &server.joinPrivate(*this, items[0]);
+    try {
+        server.joinPrivate(*this, items[0]);
+    }
+    catch (ServerException &exception) {
+        Packet response{"not_joined"};
+        packet.addItem(timestampToStr(game->getTime()));
+
+        send(response);
+    }
 }
 
 void Connection::handleCreatePrivateGame(Packet packet)
@@ -340,18 +355,16 @@ void Connection::handleCreatePrivateGame(Packet packet)
         throw NonContextualPacketException{"not logged"};
     }
 
-    game = &server.createPrivate(*this);
+    server.createPrivate(*this);
 }
 
 void Connection::handleLeaveGame(Packet packet)
 {
     if (!game) {
-        throw NonContextualPacketException{"already in a game"};
+        throw NonContextualPacketException{"not in a game"};
     }
 
     game->pushEvent(std::make_unique<EventPlayerLeft>(game->getPlayer(*this)));
-
-    game = nullptr;
 }
 
 void Connection::handleGetTime(Packet packet)

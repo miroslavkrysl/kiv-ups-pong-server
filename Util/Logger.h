@@ -2,7 +2,8 @@
 
 #include <string>
 #include <fstream>
-#include "Stats.h"
+
+#include "../Utils/Stats.h"
 #include "../Network/Packet.h"
 #include "../Network/Connection.h"
 
@@ -36,9 +37,4 @@ public:
     void log(const std::string &message, Level level = Level::Default);
     void logCommunication(Packet &packet, bool incoming, Uid uid);
     void writeStats(Stats &stats);
-};
-
-class LoggerException: public std::runtime_error
-{
-    using std::runtime_error::runtime_error;
 };

@@ -10,7 +10,7 @@ Player::Player(Connection *connection, Side side)
 
 Connection *Player::getConnection()
 {
-    return nullptr;
+    return connection;
 }
 
 void Player::setConnection(Connection *connection)

@@ -3,7 +3,7 @@
 
 #include "Logger.h"
 #include "Text.h"
-#include "../Network/Connection.h"
+#include "../Exceptions.h"
 
 Logger::Logger(std::string baseLogFile, std::string communicationLogFile, std::string statsFile)
     : baseLogFileName(baseLogFile),
@@ -29,6 +29,7 @@ Logger::Logger(std::string baseLogFile, std::string communicationLogFile, std::s
 void Logger::log(const std::string &message, Level level)
 {
     std::string color;
+    std::string prefix;
 
     switch (level) {
     case Level::Default: {
@@ -41,10 +42,12 @@ void Logger::log(const std::string &message, Level level)
     }
     case Level::Warning: {
         color = Text::decor(Text::FG_YELLOW);
+        prefix = "Warning: ";
         break;
     }
     case Level::Error: {
         color = Text::decor(Text::FG_RED);
+        prefix = "ERROR: ";
         break;
     }
     }
@@ -71,23 +74,19 @@ void Logger::logCommunication(Packet &packet, bool incoming, Uid id)
 
     std::string serialized = packet.toLogString();
 
-    communicationLogMutex.lock();
+    std::unique_lock<std::mutex> lock{communicationLogMutex};
 
-    std::cout << color << arrow << " " << id << ": " << serialized << std::endl;
-    communicationLogFile << serialized << std::endl;
-
-    communicationLogMutex.unlock();
+    std::cout << color << arrow << " " << id << ": " << serialized << Text::decor() << std::endl;
+    communicationLogFile << arrow << " " << id << " " << serialized << std::endl;
 }
 
 void Logger::writeStats(Stats &stats)
 {
-    statsMutex.lock();
+    std::unique_lock<std::mutex> lock{statsMutex};
 
     statsFile.close();
     statsFile.open(statsFileName);
-    statsFile << stats.toLogString() << std::endl;
-
-    statsMutex.unlock();
+    statsFile << stats.toLog() << std::endl;
 }
 
 Logger::~Logger()

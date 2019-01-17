@@ -4,6 +4,18 @@ project(ups)
 set(CMAKE_CXX_STANDARD 14)
 find_package (Threads REQUIRED)
 
-add_executable(ups main.cpp Network/Server.cpp Network/Server.h Network/Connection.cpp Network/Connection.h Utils/Thread.cpp Utils/Thread.h Utils/Logger.cpp Utils/Logger.h Utils/Stats.cpp Utils/Stats.h Game/PlayerState.cpp Game/PlayerState.h Network/Packet.cpp Network/Packet.h Network/ConnectionAcceptor.cpp Network/ConnectionAcceptor.h Utils/Shell.cpp Utils/Shell.h Utils/Text.cpp Utils/Text.h Game/Game.cpp Game/Game.h Game/BallState.cpp Game/BallState.h Game/GameTypes.h Game/GameTypes.cpp Game/Player.cpp Game/Player.h Game/Events.cpp Game/Events.h)
+add_executable(ups main.cpp
+        App.cpp App.h
+        Exceptions.h
+        Util/Logger.cpp Util/Logger.h
+        Util/Text.cpp Util/Text.h
+        Util/Stats.cpp Util/Stats.h
+        Types.cpp Types.h
+        Util/Thread.cpp Util/Thread.h
+        Networ/Server.cpp Networ/Server.h
+        Networ/Connection.cpp Networ/Connection.h
+        Networ/Packet.cpp Networ/Packet.h
+        Networ/PacketHandler.cpp Networ/PacketHandler.h
+        )
 
 TARGET_LINK_LIBRARIES(ups pthread)
