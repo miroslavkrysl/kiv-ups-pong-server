@@ -1,78 +1,22 @@
-#include <math.h>
-
 #include "Game.h"
-#include "../Util/Logger.h"
+#include "../App.h"
+#include "../Exceptions.h"
 
-void Game::before()
-{
-    logger.log("new game started");
-}
-
-void Game::run()
-{
-    logger.log("before while");
-
-    while (!shouldStop()) {
-
-        update();
-
-        auto evs = extractEvents();
-
-        for (auto &&event : *evs) {
-            handleEvent(event.get());
-        }
-
-        sendPackets();
-
-        if (eventHappen() || shouldStop()) {
-            continue;
-        }
-
-        std::unique_lock<std::mutex> lock(eventPushMutex);
-        eventHappenCV.wait_until(lock, nextUpdateAt());
-    }
-
-    logger.log("after while");
-}
-
-void Game::pushEvent(std::unique_ptr<Event> event)
-{
-    std::unique_lock<std::mutex> lockPush(eventPushMutex);
-
-    events.push_back(std::move(event));
-
-    eventHappenCV.notify_one();
-}
-
-std::unique_ptr<std::list<std::unique_ptr<Event>>> Game::extractEvents()
-{
-    std::unique_lock<std::mutex> lock(eventPushMutex);
-
-    auto extracted = std::make_unique<EventsList>();
-    events.swap(*extracted);
-
-    return extracted;
-}
-
-bool Game::eventHappen()
-{
-    std::unique_lock<std::mutex> lock(eventPushMutex);
-    return !events.empty();
-}
-
-Game::Game(Logger &logger, Score maxScore, Side firstPlayer)
-    : logger{logger},
-      maxScore{maxScore},
-      players{std::make_pair(Player{nullptr, Side::Left}, Player{nullptr, Side::Right})},
-      servicePlayer{&players.first},
-      isPlaying{false},
-      startTime{std::chrono::steady_clock::now()}
+Game::Game(App &app, Uid uid)
+    : app(app),
+      uid(uid),
+      scoreLeft(0),
+      scoreRight(0),
+      playerUidLeft(-1),
+      playerUidRight(-1),
+      maxScore{15},
+      serviceSide{Side::Left}
 {}
 
 PlayerState Game::expectedPlayerState(const PlayerState &state, Timestamp timestamp)
 {
     if (state.timestamp() > timestamp) {
-        throw GameException("player state timestamp is in future");
+        throw GamePlayException("player state timestamp is in future");
     }
 
     double seconds = (timestamp - state.timestamp()) / 1000.0;
@@ -99,11 +43,11 @@ PlayerState Game::expectedPlayerState(const PlayerState &state, Timestamp timest
     return {timestamp, static_cast<Position>(position), state.direction()};
 }
 
-BallState Game::nextBallState(BallState &state)
+BallState Game::nextBallState(BallState &state, bool fromCenter, Side toSide)
 {
     double radians = M_PI / 180 * state.angle();
     double width =
-        state.side() == Side::CenterToLeft || state.side() == Side::CenterToRight
+        fromCenter
         ? (GAME_WIDTH / 2 - BALL_RADIUS)
         : (GAME_WIDTH - 2 * BALL_RADIUS);
     long height = (GAME_HEIGHT - 2 * BALL_RADIUS);
@@ -123,356 +67,323 @@ BallState Game::nextBallState(BallState &state)
 
     return {
         static_cast<Timestamp>(timestamp),
-        state.side() == Side::CenterToLeft || state.side() == Side::Right
-        ? Side::Left
-        : Side::Right,
+        fromCenter
+        ? toSide
+        : state.side() == Side::Left ? Side::Right : Side::Left,
         static_cast<Position>(position),
         randomAngle(randomGenerator),
         randomSpeed(randomGenerator)};
 }
 
-bool Game::canHit(const PlayerState &playerState, const BallState &BallState)
+bool Game::canHit(const PlayerState &playerState, const BallState &ballState)
 {
     return ballState.position() <= playerState.position() + (PLAYER_HEIGHT / 2)
         && ballState.position() >= playerState.position() - (PLAYER_HEIGHT / 2);
 }
 
-Timestamp Game::getTime()
-{
-    auto now = std::chrono::steady_clock::now();
-    std::chrono::duration<Timestamp, std::milli>
-        time = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime);
-    return time.count();
-}
-
 bool Game::isInPast(Timestamp timestamp)
 {
-    return timestamp <= getTime();
+    return timestamp <= app.getCurrentTimestamp();
 }
 
-void Game::update()
+Score &Game::getScore(Side side)
 {
-    if (!isPlaying) {
+    switch (side) {
+    case Side::Left: { return scoreLeft; }
+    case Side::Right: { return scoreRight; }
+    }
+}
+
+Score &Game::getScore(Uid uid)
+{
+    return getScore(getPlayerSide(uid));
+}
+
+PlayerState &Game::getPlayerState(Side side)
+{
+    switch (side) {
+    case Side::Left: { return playerStateLeft; }
+    case Side::Right: { return playerStateRight; }
+    }
+}
+
+PlayerState &Game::getPlayerState(Uid uid)
+{
+    return getPlayerState(getPlayerSide(uid));
+}
+
+BallState &Game::getBallState()
+{
+    return ballState;
+}
+
+Side Game::getPlayerSide(Uid uid)
+{
+    if (playerUidLeft == uid) {
+        return Side::Left;
+    }
+    else if (playerUidRight == uid) {
+        return Side::Right;
+    }
+
+    throw GameException("player with uid " + std::to_string(uid) + " is not in this game");
+}
+
+Uid Game::getOpponent(Uid uid)
+{
+    switch (getPlayerSide(uid)) {
+    case Side::Left: { return playerUidRight; }
+    case Side::Right: { return playerUidLeft; }
+    }
+}
+
+
+void Game::sendPacket(Uid, Packet packet)
+{
+    app.getPacketHandler().handleOutgoing(uid, packet);
+}
+
+void Game::eventPlayerJoin(Uid uid)
+{
+    auto lock = acquireLock();
+
+    if (gamePhase != GamePhase::New) {
+        throw GameEventException("can not join more players");
+    }
+
+    if (uid < 0) {
+        throw GameException("invalid player uid");
+    }
+
+    Packet packetJoined{"joined"};
+    Packet packetOpponentJoined{"opponent_joined"};
+
+    if (playerUidLeft == -1) {
+
+        playerUidLeft = uid;
+        packetJoined.addItem(sideToStr(Side::Left));
+
+        sendPacket(playerUidLeft, packetJoined);
+
+    } else if (playerUidRight == -1) {
+
+        playerUidRight = uid;
+        packetJoined.addItem(sideToStr(Side::Right));
+
+        sendPacket(playerUidRight, packetJoined);
+        sendPacket(playerUidRight, packetOpponentJoined);
+        sendPacket(playerUidLeft, packetOpponentJoined);
+
+        Packet packetNewRound{"new_round"};
+        packetNewRound.addItem(scoreToStr(scoreLeft));
+        packetNewRound.addItem(scoreToStr(scoreRight));
+
+        sendPacket(playerUidLeft, packetNewRound);
+        sendPacket(playerUidRight, packetNewRound);
+
+        gamePhase = GamePhase::Waiting;
+    }
+}
+
+void Game::eventPlayerReady(Uid uid)
+{
+    auto lock = acquireLock();
+
+    if (gamePhase != GamePhase::Waiting) {
+        throw GameEventException("can not accept ready in playing phase");
+    }
+
+    Packet packetOpponentReady{"opponent_ready"};
+
+    switch (getPlayerSide(uid)) {
+    case Side::Left: {
+        playerReadyLeft = true;
+        sendPacket(playerUidRight, packetOpponentReady);
+        break;
+    }
+    case Side::Right: {
+        playerReadyRight = true;
+        sendPacket(playerUidLeft, std::move(packetOpponentReady));
+        break;
+    }
+    }
+
+    if (playerReadyLeft && playerReadyRight) {
+        gamePhase = GamePhase::Playing;
+
+        ballState = BallState{
+            app.getCurrentTimestamp() + START_DELAY,
+            serviceSide,
+            0,
+            0,
+            BALL_SPEED_MIN};
+
+        Packet packetBallReleased{"ball_released", ballState.itemize()};
+
+        sendPacket(playerUidLeft, packetBallReleased);
+        sendPacket(playerUidRight, packetBallReleased);
+
+        notifyOne();
         return;
     }
-
-    if (futureBallState.timestamp() <= getTime()) {
-        pushEvent(std::make_unique<EventBall>());
-    }
 }
 
-void Game::sendPackets()
+void Game::eventPlayerUpdate(Uid uid, PlayerState newPlayerState)
 {
-    for (auto &packet : packetsToSend) {
-        Connection *connection = packet.first->getConnection();
+    auto lock = acquireLock();
 
-        if (connection) {
-            connection->send(packet.second);
+    if (gamePhase != GamePhase::Playing && gamePhase != GamePhase::Waiting) {
+        throw GameEventException("can not update player while not playing");
+    }
+
+    if (isInPast(newPlayerState.timestamp())) {
+
+        PlayerState &currentState = getPlayerState(uid);
+        PlayerState expected = expectedPlayerState(currentState, newPlayerState.timestamp());
+
+        if (std::abs(newPlayerState.position() - expected.position()) < POSITION_THRESHOLD) {
+            currentState = newPlayerState;
         }
     }
 
-    packetsToSend.clear();
+    sendPacket(uid, Packet{"your_state", getPlayerState(uid).itemize()});
+    sendPacket(getOpponent(uid), Packet{"opponent_state", getPlayerState(uid).itemize()});
 }
 
-std::pair<Player *, Player *> Game::getPlayers()
+void Game::eventPlayerLeave(Uid uid)
 {
-    return std::make_pair(&players.first, &players.second);
-}
+    auto lock = acquireLock();
 
-void Game::pushPacket(Player &player, Packet packet)
-{
-    packetsToSend.emplace_back(&player, packet);
-}
+    sendPacket(getOpponent(uid), Packet{"opponent_left"});
+    sendPacket(uid, Packet{"left"});
 
-void Game::handleEvent(Event *event)
-{
-    switch (event->getType()) {
-    case EventType::PlayerJoin: {
-        handleEvent(*dynamic_cast<EventPlayerJoin *>(event));
-        logger.log("handled EventPlayerJoin");
-        break;
-    }
-    case EventType::PlayerReady: {
-        handleEvent(*dynamic_cast<EventPlayerReady *>(event));
-        logger.log("handled EventPlayerReady");
-        break;
-    }
-    case EventType::PlayerUpdate: {
-        handleEvent(*dynamic_cast<EventPlayerUpdate *>(event));
-        logger.log("handled EventPlayerUpdate");
-        break;
-    }
-    case EventType::PlayerLeft: {
-        handleEvent(*dynamic_cast<EventPlayerLeft *>(event));
-        logger.log("handled EventPlayerLeft");
-        break;
-    }
-    case EventType::NewRound: {
-        handleEvent(*dynamic_cast<EventNewRound *>(event));
-        logger.log("handled EventNewRound");
-        break;
-    }
-    case EventType::StartRound: {
-        handleEvent(*dynamic_cast<EventStartRound *>(event));
-        logger.log("handled EventStartRound");
-        break;
-    }
-    case EventType::Ball: {
-        handleEvent(*dynamic_cast<EventBall *>(event));
-        logger.log("handled EventBall");
-        break;
-    }
-    case EventType::GameOver: {
-        handleEvent(*dynamic_cast<EventGameOver *>(event));
-        logger.log("handled EventGameOver");
-        break;
-    }
-    case EventType::Restart: {
-        handleEvent(*dynamic_cast<EventRestart *>(event));
-        logger.log("handled EventRestart");
-        break;
-    }
-    case EventType::EndGame: {
-        handleEvent(*dynamic_cast<EventEndGame *>(event));
-        logger.log("handled EventEndGame");
-        break;
-    }
-    }
-}
+    playerUidLeft = -1;
+    playerUidRight = -1;
 
-void Game::handleEvent(EventPlayerJoin event)
-{
-    Packet packet1{"joined"};
-    Packet packet2{"opponent_joined"};
-
-    if (!players.first.isActive()) {
-        players.first.setConnection(&event.connection);
-        packet1.addItem(sideToStr(Side::Left));
-
-        pushPacket(players.first, packet1);
-        pushPacket(players.second, packet2);
-    }
-    else if (!players.second.isActive()) {
-        players.second.setConnection(&event.connection);
-        packet1.addItem(sideToStr(Side::Right));
-
-        pushPacket(players.second, packet1);
-        pushPacket(players.first, packet2);
-    }
-
-    event.connection.setGame(this);
-}
-
-void Game::handleEvent(EventPlayerUpdate event)
-{
-    PlayerState currentState = event.player.getState();
-
-    if (!isInPast(event.state.timestamp())) {
-        Packet packet{"your_state", currentState.itemize()};
-        pushPacket(event.player, packet);
-        return;
-    }
-
-    PlayerState expected = expectedPlayerState(currentState, event.state.timestamp());
-
-    if (event.state.position() != expected.position()) {
-        Packet packet{"your_state", currentState.itemize()};
-        pushPacket(event.player, packet);
-        return;
-    }
-
-    event.player.setState(event.state);
-
-
-    Packet packet{"opponent_state", event.player.getState().itemize()};
-    pushPacket(getOpponent(event.player), packet);
-}
-
-void Game::handleEvent(EventPlayerReady event)
-{
-    event.player.setReady(true);
-
-    Packet packet{"opponent_ready"};
-    pushPacket(getOpponent(event.player), packet);
-
-    if (players.first.isReady() && players.second.isReady()) {
-        pushEvent(std::make_unique<EventStartRound>());
-    }
-}
-
-void Game::handleEvent(EventPlayerLeft event)
-{
-    Packet packet1{"left"};
-    Packet packet2{"opponent_left"};
-
-    pushPacket(event.player, packet1);
-    pushPacket(getOpponent(event.player), packet2);
-
-    pushEvent(std::make_unique<EventEndGame>());
-}
-
-void Game::handleEvent(EventBall event)
-{
-    isPlaying = false;
-
-    if (ballState.side() == Side::Left) {
-        if (!canHit(players.first.getState(), ballState)) {
-            score.second += 1;
-            servicePlayer = &players.second;
-
-            if (score.second == maxScore) {
-                pushEvent(std::make_unique<EventGameOver>());
-                return;
-            }
-
-            pushEvent(std::make_unique<EventNewRound>());
-            return;
-        }
-    }
-    else {
-        if (!canHit(players.second.getState(), ballState)) {
-            score.first += 1;
-            servicePlayer = &players.first;
-
-            if (score.first == maxScore) {
-                pushEvent(std::make_unique<EventGameOver>());
-                return;
-            }
-
-            pushEvent(std::make_unique<EventNewRound>());
-            return;
-        }
-    }
-
-    isPlaying = true;
-
-    ballState = futureBallState;
-    futureBallState = nextBallState(ballState);
-
-    Packet packet{"ball", ballState.itemize()};
-    pushPacket(players.first, packet);
-    pushPacket(players.second, packet);
-}
-
-void Game::handleEvent(EventNewRound event)
-{
-    isPlaying = false;
-    players.first.setReady(false);
-    players.second.setReady(false);
-
-    Packet packet{"new_round"};
-
-    packet.addItem(timestampToStr(getTime()));
-    packet.addItem(scoreToStr(score.first));
-    packet.addItem(scoreToStr(score.second));
-
-    pushPacket(players.first, packet);
-    pushPacket(players.second, packet);
-}
-
-void Game::handleEvent(EventGameOver event)
-{
-    isPlaying = false;
-    Packet packet{"game_over"};
-    packet.addItem(scoreToStr(score.first));
-    packet.addItem(scoreToStr(score.second));
-
-    pushPacket(players.first, packet);
-    pushPacket(players.second, packet);
-}
-
-void Game::handleEvent(EventEndGame event)
-{
-    if (players.first.isActive()) {
-        players.first.getConnection()->setGame(nullptr);
-    }
-    if (players.second.isActive()) {
-        players.second.getConnection()->setGame(nullptr);
-    }
-
-    players.first.setConnection(nullptr);
-    players.second.setConnection(nullptr);
+    gamePhase = GamePhase::End;
+    notifyOne();
 
     stop(false);
 }
 
-Player &Game::getOpponent(Player &player)
+void Game::eventBallHit(BallState newBallState)
 {
-    if (players.first.getSide() == player.getSide()) {
-        return players.second;
-    }
-    else if (players.second.getSide() == player.getSide()) {
-        return players.first;
-    }
+    auto lock = acquireLock();
 
-    throw GameException("Player " + player.getNickname() + " is not in this game");
-}
-
-void Game::handleEvent(EventStartRound event)
-{
-    ballState = BallState{
-        getTime() + START_DELAY,
-        servicePlayer->getSide() == Side::Left ? Side::CenterToLeft : Side::CenterToRight,
-        0,
-        0,
-        BALL_SPEED_MIN
-    };
-
-    futureBallState = nextBallState(ballState);
-    isPlaying = true;
-
-    Packet packet{"start", ballState.itemize()};
-    pushPacket(players.first, packet);
-    pushPacket(players.second, packet);
-}
-
-void Game::handleEvent(EventRestart event)
-{
-    event.player.setRestart(true);
-
-    if (players.first.wantsRestart() || players.second.wantsRestart()) {
-        score.first = 0;
-        score.second = 0;
-
-        players.first.setRestart(false);
-        players.second.setRestart(false);
-
-        pushEvent(std::make_unique<EventNewRound>());
+    if (gamePhase != GamePhase::Playing) {
+        throw GameEventException("can not hit ball while not playing");
     }
 
-    Packet packet{"opponent_wants_restart"};
-    pushPacket(getOpponent(event.player), packet);
+    Packet packet{"ball_hit", ballState.itemize()};
+
+    sendPacket(playerUidLeft, packet);
+    sendPacket(playerUidRight, packet);
+
+    ballState = newBallState;
 }
 
-std::chrono::steady_clock::time_point Game::nextUpdateAt()
+void Game::eventBallMiss(Side winner)
 {
-    auto now = std::chrono::steady_clock::now();
+    auto lock = acquireLock();
 
-    if (isPlaying) {
-        return now + std::chrono::milliseconds{futureBallState.timestamp() - getTime()};
-    }
-    logger.log("default_update");
-    return now + DEFAULT_UPDATE_PERIOD;
-}
-
-bool Game::hasBothPlayers()
-{
-    return players.first.isActive() && players.second.isActive();
-}
-
-Player &Game::getPlayer(Connection &connection)
-{
-    logger.log("first");
-    logger.log("gc: " + std::to_string(players.first.getConnection() == nullptr));
-    logger.log("uid1: " + std::to_string(players.first.getConnection()->getUid()));
-    logger.log("uid: " + std::to_string(connection.getUid()));
-    if (players.first.getConnection() && players.first.getConnection()->getUid() == connection.getUid()) {
-        return players.first;
-    }
-    else if (players.second.getConnection() && players.second.getConnection()->getUid() == connection.getUid()) {
-        return players.second;
+    if (gamePhase != GamePhase::Playing) {
+        throw GameEventException("can not miss ball while not playing");
     }
 
-    throw GameException("Player " + connection.getNickname() + " is not in this game");
+    getScore(winner)++;
+    playerReadyLeft = false;
+    playerReadyRight = false;
+    serviceSide = winner;
+
+    if (scoreLeft == maxScore || scoreRight == maxScore) {
+        gamePhase = GamePhase::GameOver;
+        Packet packet{"game_over"};
+
+        packet.addItem(scoreToStr(scoreLeft));
+        packet.addItem(scoreToStr(scoreRight));
+
+        sendPacket(playerUidLeft, packet);
+        sendPacket(playerUidRight, packet);
+        return;
+    }
+
+    gamePhase = GamePhase::Waiting;
+
+    Packet packet{"new_round"};
+    packet.addItem(scoreToStr(scoreLeft));
+    packet.addItem(scoreToStr(scoreRight));
+
+    sendPacket(playerUidLeft, packet);
+    sendPacket(playerUidRight, packet);
 }
 
+void Game::eventPlayerRestart(Uid uid)
+{
+    auto lock = acquireLock();
+
+    if (gamePhase != GamePhase::GameOver) {
+        throw GameEventException("can not accept ready in playing phase");
+    }
+
+    Packet packetOpponentReady{"opponent_ready"};
+
+    switch (getPlayerSide(uid)) {
+    case Side::Left: {
+        playerReadyLeft = true;
+        sendPacket(playerUidRight, packetOpponentReady);
+        break;
+    }
+    case Side::Right: {
+        playerReadyRight = true;
+        sendPacket(playerUidLeft, packetOpponentReady);
+        break;
+    }
+    }
+
+    if (playerReadyLeft && playerReadyRight) {
+        gamePhase = GamePhase::Waiting;
+        playerReadyLeft = false;
+        playerReadyRight = false;
+        scoreLeft = 0;
+        scoreRight = 0;
+
+        Packet packetNewRound{"new_round"};
+        packetNewRound.addItem(scoreToStr(scoreLeft));
+        packetNewRound.addItem(scoreToStr(scoreRight));
+
+        sendPacket(playerUidLeft, packetNewRound);
+        sendPacket(playerUidRight, packetNewRound);
+    }
+}
+
+void Game::run()
+{
+    // game loop
+
+    while (!shouldStop()) {
+
+        auto now = app.getCurrentTimestamp();
+
+        // check whether the ball reached the side
+        if ((ballState.timestamp() - app.getCurrentTimestamp()) < 0 + TIME_THRESHOLD.count()) {
+
+            // get player on turn
+            PlayerState playerState = getPlayerState(ballState.side());
+            PlayerState expectedState = expectedPlayerState(playerState, now);
+
+            // calculate hit
+            if (canHit(expectedState, ballState)) {
+                eventBallHit(nextBallState(ballState, false));
+            } else {
+                eventBallMiss(ballState.side());
+            }
+        }
+
+        auto nextUpdateAt = std::chrono::system_clock::now()
+            + std::chrono::milliseconds{ballState.timestamp() - now};
+
+        auto lock = acquireLock();
+        waitUntil(lock, nextUpdateAt, [this]{ return gamePhase == GamePhase::Playing;});
+    }
+
+}

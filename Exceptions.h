@@ -2,37 +2,66 @@
 
 #include <stdexcept>
 
-// logger
+// app
 
-class LoggerException: public std::runtime_error
+class AppException: public std::runtime_error
 {
     using std::runtime_error::runtime_error;
+};
+
+// logger
+
+class LoggerException: public AppException
+{
+    using AppException::AppException;
 };
 
 // server
 
-class ServerException: public std::runtime_error
+class ServerException: public AppException
 {
-    using std::runtime_error::runtime_error;
+    using AppException::AppException;
 };
 
 // connection
 
-class ConnectionException: public std::runtime_error
+class ConnectionException: public AppException
 {
-    using std::runtime_error::runtime_error;
+    using AppException::AppException;
 };
 
 // packets
 
-class PacketException: public std::runtime_error
+class PacketException: public AppException
 {
-    using std::runtime_error::runtime_error;
+    using AppException::AppException;
 };
 
 class MalformedPacketException: public PacketException
 {
     using PacketException::PacketException;
+};
+
+// game
+
+class GameException: public AppException
+{
+    using AppException::AppException;
+};
+
+class GameTypeException: public GameException
+{
+    using GameException::GameException;
+};
+
+class GameEventException: public GameException
+{
+    using GameException::GameException;
+};
+
+class GamePlayException: public GameException
+{
+    using GameException::GameException;
 };
 
 //class UnknownPacketException: public PacketException

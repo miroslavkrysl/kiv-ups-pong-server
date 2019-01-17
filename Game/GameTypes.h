@@ -2,12 +2,17 @@
 
 #include <cstdint>
 #include <string>
-#include <stdexcept>
+
+enum class GamePhase {
+    New,
+    Waiting,
+    Playing,
+    GameOver,
+    End
+};
 
 enum class Side {
     Left,
-    CenterToLeft,
-    CenterToRight,
     Right,
 };
 
@@ -18,7 +23,7 @@ enum class PlayerDirection
     Stop
 };
 
-typedef uint32_t Timestamp;
+typedef int64_t Timestamp;
 typedef int16_t Position;
 typedef uint16_t Size;
 typedef uint8_t Score;
@@ -49,11 +54,8 @@ const Position PLAYER_POSITION_MAX{(GAME_HEIGHT / 2) - (PLAYER_HEIGHT / 2)};
 const Position PLAYER_POSITION_MIN{-(GAME_HEIGHT / 2) + (PLAYER_HEIGHT / 2)};
 
 const Score MAX_SCORE{UINT8_MAX};
-const Timestamp TIMESTAMP_MAX{UINT32_MAX};
 
-bool isValidTimestamp(unsigned long time);
 bool isValidPlayerPosition(int position);
-bool isValidPlayerDirection(PlayerDirection direction);
 
 Timestamp strToTimestamp(std::string &str);
 Position strToPlayerPosition(std::string &str);
@@ -67,8 +69,3 @@ std::string playerPositionToStr(Position position);
 std::string directionToStr(PlayerDirection direction);
 std::string ballPositionToStr(Position position);
 std::string angleToStr(Angle angle);
-
-class GameTypeException: public std::runtime_error
-{
-    using std::runtime_error::runtime_error;
-};

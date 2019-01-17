@@ -34,15 +34,6 @@ Packet::Packet(std::string type, std::vector<std::string> items)
       items{std::move(items)}
 {}
 
-Packet::Packet(Packet &&packet) noexcept
-{
-    packet.type = type;
-    type = "";
-
-    packet.items.clear();
-    std::swap(packet.items, items);
-}
-
 std::string Packet::getType() const
 {
     return type;

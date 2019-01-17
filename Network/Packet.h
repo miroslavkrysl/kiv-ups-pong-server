@@ -4,6 +4,7 @@
 #include <vector>
 #include <stdexcept>
 #include <array>
+#include <memory>
 
 class Packet
 {
@@ -21,7 +22,6 @@ private:
 public:
     explicit Packet(std::string type = "");
     explicit Packet(std::string type, std::vector<std::string> items);
-    Packet(Packet &&packet) noexcept;
 
     std::string getType() const;
     std::vector<std::string> getItems() const;

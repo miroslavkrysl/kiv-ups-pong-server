@@ -1,30 +1,17 @@
 #include "GameTypes.h"
-
-bool isValidTimestamp(unsigned long timestamp)
-{
-    return timestamp <= TIMESTAMP_MAX;
-}
+#include "../Exceptions.h"
 
 bool isValidPlayerPosition(int position)
 {
     return position <= PLAYER_POSITION_MAX && position >= PLAYER_POSITION_MIN;
 }
 
-bool isValidPlayerDirection(PlayerDirection direction)
-{
-    return true;
-}
-
 Timestamp strToTimestamp(std::string &str)
 {
-    unsigned long timestamp;
+    long long timestamp;
 
     try {
-        timestamp = std::stoul(str);
-
-        if (!isValidTimestamp(timestamp)) {
-            throw std::exception{};
-        }
+        timestamp = std::stoll(str);
     }
     catch (...) {
         throw GameTypeException("timestamp is in invalid format");
@@ -93,7 +80,6 @@ std::string directionToStr(PlayerDirection direction)
     case PlayerDirection::Up:return "up";
     case PlayerDirection::Down:return "down";
     case PlayerDirection::Stop:return "stop";
-    default: return "";
     }
 }
 
@@ -111,9 +97,6 @@ std::string sideToStr(Side side)
 {
     switch (side) {
     case Side::Left:return "l";
-    case Side::CenterToLeft:return "cl";
-    case Side::CenterToRight:return "cr";
     case Side::Right:return "r";
-    default: return "";
     }
 }

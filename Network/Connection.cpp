@@ -147,8 +147,8 @@ void Connection::run()
                 }
 
                 // send poke packet
-                Packet pokePacket("poke");
-                send(pokePacket);
+                send(Packet{"poke"});
+
                 continue;
             }
             else if (errno == EBADF || errno == EINVAL) {
@@ -199,16 +199,16 @@ void Connection::run()
                 app.getLogger().logCommunication(packet, true, getUid());
 
                 try {
+                    // TODO use packet handler
 //                    app.getPacketHandler()->handleReceiving(packet);
                     app.getLogger().log("received: " + packet.toLog());
+                    corruptedPackets = 0;
+                    app.getStats().addPacketsReceived(1);
                 }
                 catch (MalformedPacketException &exception) {
                     corruptedPackets++;
                     app.getStats().addPacketsDropped(1);
                 }
-
-                corruptedPackets = 0;
-                app.getStats().addPacketsReceived(1);
 
                 data.clear();
             }

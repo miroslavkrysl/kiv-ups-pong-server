@@ -2,12 +2,12 @@
 
 #include <functional>
 
-#include "Util/Logger.h"
 #include "Types.h"
-#include "Networ/Server.h"
-#include "Networ/Connection.h"
-#include "Networ/PacketHandler.h"
-#include "Gam/Game.h"
+#include "Util/Logger.h"
+#include "Network/Server.h"
+#include "Network/Connection.h"
+#include "Network/PacketHandler.h"
+#include "Game/Game.h"
 
 class App: public Thread
 {
@@ -55,7 +55,7 @@ public:
     Game *addGame();
     Game *getGame(Uid uid);
     size_t clearEndedGames();
-    size_t forEachGame(std::function<void(Game & )> function);
+    size_t forEachGame(std::function<void(Game &)> function);
 
     void before() override;
     void run() override;

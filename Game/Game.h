@@ -1,89 +1,77 @@
 #pragma once
 
-#include <list>
-#include <chrono>
-#include <stdexcept>
-#include <mutex>
-#include <condition_variable>
+#pragma once
+
 #include <random>
 
-#include "Events.h"
-#include "Player.h"
 #include "GameTypes.h"
 #include "BallState.h"
+#include "PlayerState.h"
+#include "../Types.h"
+#include "../Util/Thread.h"
+#include "../Network/Packet.h"
 
-class Connection;
-class Logger;
-
-typedef std::list<std::unique_ptr<Event>> EventsList;
-typedef std::pair<Player *, Packet> Message;
+class App;
 
 class Game: public Thread
 {
-    const std::chrono::seconds DEFAULT_UPDATE_PERIOD{10};
+public:
+    const std::chrono::seconds DEFAULT_UPDATE_PERIOD{60};
+    const std::chrono::milliseconds TIME_THRESHOLD{50};
+    const Position POSITION_THRESHOLD{10};
 
-    const std::chrono::steady_clock::time_point startTime;
-    Logger &logger;
+private:
+    App &app;
+    Uid uid;
+
+    GamePhase gamePhase;
     BallState ballState;
-    BallState futureBallState;
+    PlayerState playerStateLeft;
+    PlayerState playerStateRight;
+    Uid playerUidLeft;
+    Uid playerUidRight;
+
+    bool playerReadyLeft;
+    bool playerReadyRight;
+
+    Side serviceSide;
     Score maxScore;
-    std::pair<Score, Score> score;
-    std::pair<Player, Player> players;
-    Player *servicePlayer;
-    bool isPlaying;
+
+    Score scoreLeft;
+    Score scoreRight;
 
     std::default_random_engine randomGenerator;
     std::uniform_int_distribution<Angle> randomAngle{ANGLE_MIN, ANGLE_MAX};
     std::uniform_int_distribution<Speed> randomSpeed{BALL_SPEED_MIN, BALL_SPEED_MAX};
 
-    EventsList events;
-    std::condition_variable eventHappenCV;
-    std::mutex eventHappenMutex;
-    std::mutex eventPushMutex;
+    PlayerState expectedPlayerState(const PlayerState &state, Timestamp timestamp);
+    BallState nextBallState(BallState &state, bool fromCenter, Side toSide = Side::Left);
+    bool canHit(const PlayerState &playerState, const BallState &BallState);
+    bool isInPast(Timestamp timestamp);
 
-    std::list<Message> packetsToSend;
+    Score &getScore(Side side);
+    Score &getScore(Uid uid);
+    PlayerState &getPlayerState(Side side);
+    PlayerState &getPlayerState(Uid uid);
+    BallState &getBallState();
+    Side getPlayerSide(Uid uid);
+    Uid getOpponent(Uid uid);
 
-    std::unique_ptr<EventsList> extractEvents();
-
-    void sendPackets();
-    std::chrono::steady_clock::time_point nextUpdateAt();
-
-    void handleEvent(Event *event);
-    void handleEvent(EventPlayerJoin event);
-    void handleEvent(EventPlayerUpdate event);
-    void handleEvent(EventPlayerReady event);
-    void handleEvent(EventPlayerLeft event);
-    void handleEvent(EventNewRound event);
-    void handleEvent(EventStartRound event);
-    void handleEvent(EventBall event);
-    void handleEvent(EventGameOver event);
-    void handleEvent(EventRestart event);
-    void handleEvent(EventEndGame event);
+    void sendPacket(Uid, Packet packet);
 
 public:
-    explicit Game(Logger &logger, Score maxScore = 15, Side firstPlayer = Side::Left);
 
-    void pushEvent(std::unique_ptr<Event> event);
-    void pushPacket(Player &player, Packet packet);
-    void update();
+    Game(App &app, Uid uid);
 
-    Timestamp getTime();
-    std::pair<Player *, Player *> getPlayers();
-    Player &getPlayer(Connection &connection);
-    Player &getOpponent(Player &player);
-    bool isInPast(Timestamp timestamp);
-    bool hasBothPlayers();
+    void eventPlayerJoin(Uid uid);
+    void eventPlayerReady(Uid uid);
+    void eventPlayerUpdate(Uid uid, PlayerState playerState);
+    void eventPlayerLeave(Uid uid);
+    void eventBallHit(BallState newBallState);
+    void eventBallMiss(Side winner);
+    void eventPlayerRestart(Uid uid);
 
-    PlayerState expectedPlayerState(const PlayerState &state, Timestamp timestamp);
-    BallState nextBallState(BallState &state);
-    bool canHit(const PlayerState &playerState, const BallState &BallState);
-    bool eventHappen();
-
-    void before() override;
     void run() override;
 };
 
-class GameException: public std::runtime_error
-{
-    using std::runtime_error::runtime_error;
-};
+

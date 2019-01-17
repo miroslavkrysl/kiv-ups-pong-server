@@ -1,15 +1,10 @@
 #include "PlayerState.h"
+#include "../Exceptions.h"
 
 void PlayerState::validate()
 {
-    if (!isValidTimestamp(timestamp_)) {
-        throw GameTypeException("player timestamp is invalid");
-    }
     if (!isValidPlayerPosition(position_)) {
         throw GameTypeException("player position is invalid");
-    }
-    if (!isValidPlayerDirection(direction_)) {
-        throw GameTypeException("player direction is invalid");
     }
 }
 

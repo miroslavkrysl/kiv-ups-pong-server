@@ -74,7 +74,7 @@ Connection *App::addConnection(int socket, sockaddr_in address)
     Connection *connection = &inserted.first->second;
 
     if (connections.size() > maxConnections) {
-        connection->send(std::make_unique<Packet>("server_full"));
+        connection->send(Packet{"server_full"});
         return nullptr;
     }
 
@@ -115,7 +115,7 @@ size_t App::clearClosedConnections()
             // check for active game
             auto foundGame = connectionsGames.find(uid);
             if (foundGame != connectionsGames.end()) {
-                foundGame->second->removePlayer(uid);
+                foundGame->second->eventPlayerLeave(uid);
             }
             connectionsGames.erase(uid);
 
@@ -197,7 +197,7 @@ size_t App::clearEndedGames()
     return count;
 }
 
-size_t App::forEachGame(std::function<void(Game & )> function)
+size_t App::forEachGame(std::function<void(Game &)> function)
 {
     std::unique_lock<std::mutex> lock{gamesMutex};
 

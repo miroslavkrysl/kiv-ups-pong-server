@@ -4,8 +4,8 @@
 #include <fstream>
 
 #include "../Util/Stats.h"
-#include "../Networ/Packet.h"
-#include "../Networ/Connection.h"
+#include "../Network/Packet.h"
+#include "../Network/Connection.h"
 
 class Logger
 {
