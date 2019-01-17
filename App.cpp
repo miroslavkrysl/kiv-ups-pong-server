@@ -8,7 +8,8 @@ App::App(Port port, std::string ip, size_t maxConnections)
       packetHandler{*this},
       lastConnectionUid{0},
       lastGameUid{0},
-      maxConnections{maxConnections}
+      maxConnections{maxConnections},
+      pendingGame{nullptr}
 {}
 
 Logger &App::getLogger()
@@ -42,14 +43,14 @@ Timestamp App::getCurrentTimestamp()
 
 void App::addNickname(Uid uid, std::string nickname)
 {
-    std::unique_lock<std::mutex> lock(connectionsMutex);
+    std::unique_lock<std::recursive_mutex> lock(connectionsNicknamesMutex);
 
     connectionsNicknames.emplace(uid, nickname);
 }
 
 std::string App::getNickname(Uid uid)
 {
-    std::unique_lock<std::mutex> lock(connectionsNicknamesMutex);
+    std::unique_lock<std::recursive_mutex> lock(connectionsNicknamesMutex);
 
     auto found = connectionsNicknames.find(uid);
 
@@ -60,9 +61,29 @@ std::string App::getNickname(Uid uid)
     return found->second;
 }
 
+void App::removeNickname(Uid uid)
+{
+    std::unique_lock<std::recursive_mutex> lock(connectionsNicknamesMutex);
+    connectionsNicknames.erase(uid);
+}
+
+
+void App::login(Uid uid, std::string nickname)
+{
+    if (isLogged(uid)) {
+        throw AlreadyLoggedException{std::to_string(uid) + ": " + nickname + " - aldready logged"};
+    }
+    addNickname(uid, nickname);
+}
+
+bool App::isLogged(Uid uid)
+{
+    return !getNickname(uid).empty();
+}
+
 Connection *App::addConnection(int socket, sockaddr_in address)
 {
-    std::unique_lock<std::mutex> lock(connectionsMutex);
+    std::unique_lock<std::recursive_mutex> lock(connectionsMutex);
 
     Uid uid = lastConnectionUid++;
 
@@ -85,7 +106,7 @@ Connection *App::addConnection(int socket, sockaddr_in address)
 
 Connection *App::getConnection(Uid uid)
 {
-    std::unique_lock<std::mutex> lock(connectionsMutex);
+    std::unique_lock<std::recursive_mutex> lock(connectionsMutex);
 
     auto found = connections.find(uid);
 
@@ -96,9 +117,22 @@ Connection *App::getConnection(Uid uid)
     return &found->second;
 }
 
+void App::removeConnection(Uid uid)
+{
+    std::unique_lock<std::recursive_mutex> lock(connectionsMutex);
+
+    Connection *connection = getConnection(uid);
+    if (connection) {
+        leaveGame(uid);
+        removeNickname(uid);
+        connection->stop(true);
+        connections.erase(uid);
+    }
+}
+
 size_t App::clearClosedConnections()
 {
-    std::unique_lock<std::mutex> lock{connectionsMutex};
+    std::unique_lock<std::recursive_mutex> lock{connectionsMutex};
 
     size_t count{0};
 
@@ -109,18 +143,7 @@ size_t App::clearClosedConnections()
 
             Uid uid = connectionsIt->first;
 
-            std::unique_lock<std::mutex> lockCG{connectionsGamesMutex};
-            std::unique_lock<std::mutex> lockCN{connectionsNicknamesMutex};
-
-            // check for active game
-            auto foundGame = connectionsGames.find(uid);
-            if (foundGame != connectionsGames.end()) {
-                foundGame->second->eventPlayerLeave(uid);
-            }
-            connectionsGames.erase(uid);
-
-            // check for nickname
-            connectionsNicknames.erase(uid);
+            removeConnection(uid);
 
             connectionsIt = connections.erase(connectionsIt);
             count++;
@@ -134,7 +157,7 @@ size_t App::clearClosedConnections()
 
 size_t App::forEachConnection(std::function<void(Connection &)> function)
 {
-    std::unique_lock<std::mutex> lock{connectionsMutex};
+    std::unique_lock<std::recursive_mutex> lock{connectionsMutex};
 
     size_t count{0};
 
@@ -148,7 +171,7 @@ size_t App::forEachConnection(std::function<void(Connection &)> function)
 
 Game *App::addGame()
 {
-    std::unique_lock<std::mutex> lock(gamesMutex);
+    std::unique_lock<std::recursive_mutex> lock(gamesMutex);
 
     Uid uid = lastGameUid++;
 
@@ -166,7 +189,7 @@ Game *App::addGame()
 
 Game *App::getGame(Uid uid)
 {
-    std::unique_lock<std::mutex> lock(gamesMutex);
+    std::unique_lock<std::recursive_mutex> lock(gamesMutex);
 
     auto found = games.find(uid);
 
@@ -177,9 +200,62 @@ Game *App::getGame(Uid uid)
     return &found->second;
 }
 
+Game *App::joinGame(Uid uid)
+{
+    std::unique_lock<std::recursive_mutex> lock{gamesMutex};
+
+    Game *game;
+
+    if (pendingGame) {
+        game = pendingGame;
+        pendingGame = nullptr;
+    } else {
+        pendingGame = addGame();
+        game = pendingGame;
+    }
+
+    game->eventPlayerJoin(uid);
+
+    return game;
+}
+
+void App::leaveGame(Uid connectionUid)
+{
+    std::unique_lock<std::recursive_mutex> lock(connectionsGamesMutex);
+
+    Game *game = getConnectionGame(connectionUid);
+    if (game) {
+        game->eventPlayerLeave(connectionUid);
+    }
+}
+
+void App::removeGame(Uid uid)
+{
+    std::unique_lock<std::recursive_mutex> lock(gamesMutex);
+
+    Game *game = getGame(uid);
+    if (game) {
+        game->stop(true);
+        games.erase(uid);
+    }
+}
+
+Game *App::getConnectionGame(Uid connectionUid)
+{
+    std::unique_lock<std::recursive_mutex> lock(connectionsGamesMutex);
+
+    auto found = connectionsGames.find(connectionUid);
+
+    if (found == connectionsGames.end()) {
+        return nullptr;
+    }
+
+    return getGame(found->second);
+}
+
 size_t App::clearEndedGames()
 {
-    std::unique_lock<std::mutex> lock{gamesMutex};
+    std::unique_lock<std::recursive_mutex> lock{gamesMutex};
 
     size_t count{0};
 
@@ -199,7 +275,7 @@ size_t App::clearEndedGames()
 
 size_t App::forEachGame(std::function<void(Game &)> function)
 {
-    std::unique_lock<std::mutex> lock{gamesMutex};
+    std::unique_lock<std::recursive_mutex> lock{gamesMutex};
 
     size_t count{0};
 

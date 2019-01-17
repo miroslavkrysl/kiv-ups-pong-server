@@ -37,8 +37,6 @@ private:
     std::chrono::steady_clock::time_point lastActiveAt;
     std::chrono::seconds inactiveTimeout;
 
-    void setMode(Mode mode);
-
 public:
     Connection(App &app, Uid uid, int socket, sockaddr_in address);
     Connection(const Connection &connection) = delete;
@@ -48,6 +46,7 @@ public:
     std::string getIp() const;
     const sockaddr_in &getAdress() const;
     Mode getMode() const;
+    void setMode(Mode mode);
 
     void send(const Packet &packet) const;
 

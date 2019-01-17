@@ -140,7 +140,7 @@ Uid Game::getOpponent(Uid uid)
 
 void Game::sendPacket(Uid, Packet packet)
 {
-    app.getPacketHandler().handleOutgoing(uid, packet);
+    app.getPacketHandler().handleOutgoingPacket(uid, packet);
 }
 
 void Game::eventPlayerJoin(Uid uid)
@@ -156,7 +156,6 @@ void Game::eventPlayerJoin(Uid uid)
     }
 
     Packet packetJoined{"joined"};
-    Packet packetOpponentJoined{"opponent_joined"};
 
     if (playerUidLeft == -1) {
 
@@ -171,8 +170,9 @@ void Game::eventPlayerJoin(Uid uid)
         packetJoined.addItem(sideToStr(Side::Right));
 
         sendPacket(playerUidRight, packetJoined);
-        sendPacket(playerUidRight, packetOpponentJoined);
-        sendPacket(playerUidLeft, packetOpponentJoined);
+
+        sendPacket(playerUidRight, Packet{"opponent_joined",{app.getNickname(playerUidLeft)}});
+        sendPacket(playerUidLeft, Packet{"opponent_joined",{app.getNickname(playerUidRight)}});
 
         Packet packetNewRound{"new_round"};
         packetNewRound.addItem(scoreToStr(scoreLeft));
@@ -386,4 +386,11 @@ void Game::run()
         waitUntil(lock, nextUpdateAt, [this]{ return gamePhase == GamePhase::Playing;});
     }
 
+}
+
+void Game::after()
+{
+    Packet packet{"game_ended"};
+    sendPacket(playerUidLeft, packet);
+    sendPacket(playerUidRight, packet);
 }

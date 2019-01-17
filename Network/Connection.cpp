@@ -9,34 +9,6 @@
 #include "../Util/Text.h"
 #include "../Exceptions.h"
 
-void Connection::setMode(Connection::Mode mode)
-{
-    timeval recvTimeout{};
-
-    switch (mode) {
-    case Mode::Idle: {
-        recvTimeout = RECV_TIMEOUT_IDLE;
-        inactiveTimeout = INACTIVE_TIMEOUT_IDLE;
-        break;
-    }
-    case Mode::Busy: {
-        recvTimeout = RECV_TIMEOUT_BUSY;
-        inactiveTimeout = INACTIVE_TIMEOUT_BUSY;
-        break;
-    }
-    }
-
-
-    int returnValue = setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const void *>(&recvTimeout), sizeof(recvTimeout));
-
-    if (returnValue == -1) {
-        throw ConnectionException(
-            "can not set the socket option for receive timeout: " + std::string{std::strerror(errno)});
-    }
-
-    this->mode = mode;
-}
-
 Connection::Connection(App &app, Uid uid, int socket, sockaddr_in address)
     : app(app),
       uid(uid),
@@ -94,6 +66,34 @@ const sockaddr_in &Connection::getAdress() const
 Connection::Mode Connection::getMode() const
 {
     return mode;
+}
+
+void Connection::setMode(Connection::Mode mode)
+{
+    timeval recvTimeout{};
+
+    switch (mode) {
+    case Mode::Idle: {
+        recvTimeout = RECV_TIMEOUT_IDLE;
+        inactiveTimeout = INACTIVE_TIMEOUT_IDLE;
+        break;
+    }
+    case Mode::Busy: {
+        recvTimeout = RECV_TIMEOUT_BUSY;
+        inactiveTimeout = INACTIVE_TIMEOUT_BUSY;
+        break;
+    }
+    }
+
+
+    int returnValue = setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const void *>(&recvTimeout), sizeof(recvTimeout));
+
+    if (returnValue == -1) {
+        throw ConnectionException(
+            "can not set the socket option for receive timeout: " + std::string{std::strerror(errno)});
+    }
+
+    this->mode = mode;
 }
 
 void Connection::send(const Packet &packet) const

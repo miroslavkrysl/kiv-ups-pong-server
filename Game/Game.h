@@ -72,6 +72,7 @@ public:
     void eventPlayerRestart(Uid uid);
 
     void run() override;
+    void after() override;
 };
 
 

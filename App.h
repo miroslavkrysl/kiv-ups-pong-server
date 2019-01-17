@@ -22,17 +22,18 @@ private:
     PacketHandler packetHandler;
     std::unordered_map<Uid, Connection> connections;
     std::unordered_map<Uid, Game> games;
-    std::unordered_map<Uid, Game *> connectionsGames;
+    std::unordered_map<Uid, Uid> connectionsGames;
     std::unordered_map<Uid, std::string> connectionsNicknames;
+    Game *pendingGame;
 
     size_t maxConnections;
     Uid lastConnectionUid;
     Uid lastGameUid;
 
-    std::mutex connectionsMutex;
-    std::mutex gamesMutex;
-    std::mutex connectionsGamesMutex;
-    std::mutex connectionsNicknamesMutex;
+    std::recursive_mutex connectionsMutex;
+    std::recursive_mutex gamesMutex;
+    std::recursive_mutex connectionsGamesMutex;
+    std::recursive_mutex connectionsNicknamesMutex;
 
 public:
     explicit App(Port port = DEFAULT_PORT, std::string ip = "", size_t maxConnections = DEFAUL_MAX_CONNECTIONS);
@@ -46,14 +47,22 @@ public:
 
     void addNickname(Uid uid, std::string nickname);
     std::string getNickname(Uid uid);
+    void removeNickname(Uid uid);
+    void login(Uid uid, std::string nickname);
+    bool isLogged(Uid uid);
 
     Connection *addConnection(int socket, sockaddr_in address);
     Connection *getConnection(Uid uid);
+    void removeConnection(Uid uid);
     size_t clearClosedConnections();
     size_t forEachConnection(std::function<void(Connection &)> function);
 
     Game *addGame();
     Game *getGame(Uid uid);
+    Game *joinGame(Uid connectionUid);
+    void leaveGame(Uid connectionUid);
+    void removeGame(Uid uid);
+    Game *getConnectionGame(Uid connectionUid);
     size_t clearEndedGames();
     size_t forEachGame(std::function<void(Game &)> function);
 

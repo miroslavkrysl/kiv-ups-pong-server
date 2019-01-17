@@ -43,10 +43,6 @@ void Thread::initially()
 
 bool Thread::stop(bool wait)
 {
-    if (!running) {
-        return false;
-    }
-
     stopCondition = true;
     notifyAll();
 
@@ -54,7 +50,7 @@ bool Thread::stop(bool wait)
         return join();
     }
 
-    return true;
+    return running;
 }
 
 void Thread::after()
