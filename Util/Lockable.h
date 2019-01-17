@@ -2,19 +2,18 @@
 
 #include <functional>
 #include <condition_variable>
-#include <mutex>
 #include <chrono>
 
 typedef std::unique_lock<std::mutex> Lock;
 typedef std::function<bool()> Predicate;
 typedef std::chrono::nanoseconds Duration;
-typedef std::chrono::steady_clock::time_point& TimePoint;
+typedef std::chrono::system_clock::time_point& TimePoint;
 typedef std::cv_status WaitStatus;
 
 class Lockable
 {
     mutable std::condition_variable conditionVariable;
-    mutable std::recursive_mutex mutex;
+    mutable std::mutex mutex;
 
 public:
     virtual Lock acquireLock() const final;

@@ -31,6 +31,35 @@ PacketHandler &App::getPacketHandler()
     return packetHandler;
 }
 
+Timestamp App::getCurrentTimestamp()
+{
+    std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()
+    );
+
+    return ms.count();
+}
+
+void App::addNickname(Uid uid, std::string nickname)
+{
+    std::unique_lock<std::mutex> lock(connectionsMutex);
+
+    connectionsNicknames.emplace(uid, nickname);
+}
+
+std::string App::getNickname(Uid uid)
+{
+    std::unique_lock<std::mutex> lock(connectionsNicknamesMutex);
+
+    auto found = connectionsNicknames.find(uid);
+
+    if (found == connectionsNicknames.end()) {
+        return "";
+    }
+
+    return found->second;
+}
+
 Connection *App::addConnection(int socket, sockaddr_in address)
 {
     std::unique_lock<std::mutex> lock(connectionsMutex);
@@ -45,7 +74,7 @@ Connection *App::addConnection(int socket, sockaddr_in address)
     Connection *connection = &inserted.first->second;
 
     if (connections.size() > maxConnections) {
-        connection->send(Packet{"server_full"});
+        connection->send(std::make_unique<Packet>("server_full"));
         return nullptr;
     }
 
@@ -77,6 +106,22 @@ size_t App::clearClosedConnections()
     while (connectionsIt != connections.end()) {
 
         if (!connectionsIt->second.isRunning()) {
+
+            Uid uid = connectionsIt->first;
+
+            std::unique_lock<std::mutex> lockCG{connectionsGamesMutex};
+            std::unique_lock<std::mutex> lockCN{connectionsNicknamesMutex};
+
+            // check for active game
+            auto foundGame = connectionsGames.find(uid);
+            if (foundGame != connectionsGames.end()) {
+                foundGame->second->removePlayer(uid);
+            }
+            connectionsGames.erase(uid);
+
+            // check for nickname
+            connectionsNicknames.erase(uid);
+
             connectionsIt = connections.erase(connectionsIt);
             count++;
         } else {

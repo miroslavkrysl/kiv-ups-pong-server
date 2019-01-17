@@ -22,7 +22,8 @@ private:
     PacketHandler packetHandler;
     std::unordered_map<Uid, Connection> connections;
     std::unordered_map<Uid, Game> games;
-    std::unordered_map<Uid, Game *> connectionGame;
+    std::unordered_map<Uid, Game *> connectionsGames;
+    std::unordered_map<Uid, std::string> connectionsNicknames;
 
     size_t maxConnections;
     Uid lastConnectionUid;
@@ -30,6 +31,8 @@ private:
 
     std::mutex connectionsMutex;
     std::mutex gamesMutex;
+    std::mutex connectionsGamesMutex;
+    std::mutex connectionsNicknamesMutex;
 
 public:
     explicit App(Port port = DEFAULT_PORT, std::string ip = "", size_t maxConnections = DEFAUL_MAX_CONNECTIONS);
@@ -39,6 +42,10 @@ public:
     Server &getServer();
     Stats &getStats();
     PacketHandler &getPacketHandler();
+    Timestamp getCurrentTimestamp();
+
+    void addNickname(Uid uid, std::string nickname);
+    std::string getNickname(Uid uid);
 
     Connection *addConnection(int socket, sockaddr_in address);
     Connection *getConnection(Uid uid);
