@@ -14,53 +14,49 @@ Stats::Stats()
 
 void Stats::setStarted(std::chrono::system_clock::time_point started)
 {
+    auto lock = acquireLock();
     Stats::started = started;
 }
 
 void Stats::addPacketsReceived(uint64_t count)
 {
-    std::unique_lock<std::mutex> lock{packetsReceivedMutex};
+    auto lock = acquireLock();
     messagesReceived += count;
 }
 
 void Stats::addPacketsDropped(uint64_t count)
 {
-    std::unique_lock<std::mutex> lock{packetsDroppedMutex};
+    auto lock = acquireLock();
     messagesDropped += count;
 }
 
 void Stats::addBytesReceived(uint64_t count)
 {
-    std::unique_lock<std::mutex> lock{bytesReceivedMutex};
+    auto lock = acquireLock();
     bytesReceived += count;
 }
 
 void Stats::addBytesDropped(uint64_t count)
 {
-    std::unique_lock<std::mutex> lock{bytesDroppedMutex};
+    auto lock = acquireLock();
     bytesDropped += count;
 }
 
 void Stats::addPacketsSent(uint64_t count)
 {
-    std::unique_lock<std::mutex> lock{packetsSentMutex};
+    auto lock = acquireLock();
     messagesSent += count;
 }
 
 void Stats::addBytesSent(uint64_t count)
 {
-    std::unique_lock<std::mutex> lock{bytesSentMutex};
+    auto lock = acquireLock();
     bytesSent += count;
 }
 
-std::string Stats::toLog()
+std::string Stats::toLog() const
 {
-    std::unique_lock<std::mutex> lock1{packetsReceivedMutex};
-    std::unique_lock<std::mutex> lock2{packetsDroppedMutex};
-    std::unique_lock<std::mutex> lock3{bytesReceivedMutex};
-    std::unique_lock<std::mutex> lock4{bytesDroppedMutex};
-    std::unique_lock<std::mutex> lock5{packetsSentMutex};
-    std::unique_lock<std::mutex> lock6{bytesSentMutex};
+    auto lock = acquireLock();
 
     auto now = std::chrono::system_clock::now();
     std::time_t startTime = std::chrono::system_clock::to_time_t(started);

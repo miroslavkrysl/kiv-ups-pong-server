@@ -58,7 +58,7 @@ void Logger::log(const std::string &message, Level level)
     baseLogFile << message << std::endl;
 }
 
-void Logger::logCommunication(Packet &packet, bool incoming, Uid id)
+void Logger::logCommunication(const Packet &packet, bool incoming, Uid id)
 {
     std::string color;
     std::string arrow;
@@ -66,13 +66,12 @@ void Logger::logCommunication(Packet &packet, bool incoming, Uid id)
     if (incoming) {
         color = Text::decor(Text::FG_BLUE);
         arrow = "<-";
-    }
-    else {
+    } else {
         color = Text::decor(Text::FG_MAGENTA);
         arrow = "->";
     }
 
-    std::string serialized = packet.toLogString();
+    std::string serialized = packet.toLog();
 
     std::unique_lock<std::mutex> lock{communicationLogMutex};
 
@@ -80,7 +79,7 @@ void Logger::logCommunication(Packet &packet, bool incoming, Uid id)
     communicationLogFile << arrow << " " << id << " " << serialized << std::endl;
 }
 
-void Logger::writeStats(Stats &stats)
+void Logger::writeStats(const Stats &stats)
 {
     std::unique_lock<std::mutex> lock{statsMutex};
 

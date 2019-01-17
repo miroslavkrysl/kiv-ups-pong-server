@@ -3,14 +3,15 @@
 #include <string>
 #include <fstream>
 
-#include "../Utils/Stats.h"
-#include "../Network/Packet.h"
-#include "../Network/Connection.h"
+#include "../Util/Stats.h"
+#include "../Networ/Packet.h"
+#include "../Networ/Connection.h"
 
 class Logger
 {
 public:
-    enum class Level{
+    enum class Level
+    {
         Default,
         Success,
         Warning,
@@ -35,6 +36,6 @@ public:
     virtual ~Logger();
 
     void log(const std::string &message, Level level = Level::Default);
-    void logCommunication(Packet &packet, bool incoming, Uid uid);
-    void writeStats(Stats &stats);
+    void logCommunication(const Packet &packet, bool incoming, Uid uid);
+    void writeStats(const Stats &stats);
 };

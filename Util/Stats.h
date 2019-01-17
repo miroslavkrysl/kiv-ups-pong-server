@@ -2,9 +2,10 @@
 
 #include <string>
 #include <chrono>
-#include <mutex>
 
-class Stats
+#include "Lockable.h"
+
+class Stats: public Lockable
 {
     std::chrono::system_clock::time_point started;
     uint64_t messagesReceived;
@@ -13,13 +14,6 @@ class Stats
     uint64_t bytesDropped;
     uint64_t messagesSent;
     uint64_t bytesSent;
-
-    std::mutex packetsReceivedMutex;
-    std::mutex packetsDroppedMutex;
-    std::mutex bytesReceivedMutex;
-    std::mutex bytesDroppedMutex;
-    std::mutex packetsSentMutex;
-    std::mutex bytesSentMutex;
 
 public:
     Stats();
@@ -32,7 +26,7 @@ public:
     void addPacketsSent(uint64_t count);
     void addBytesSent(uint64_t count);
 
-    std::string toLog();
+    std::string toLog() const;
 };
 
 

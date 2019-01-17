@@ -4,7 +4,7 @@
 #include <unordered_map>
 
 #include "Packet.h"
-#include "../Utils/Thread.h"
+#include "../Util/Thread.h"
 #include "../Types.h"
 
 class App;
@@ -31,7 +31,7 @@ private:
     Port port;
     std::string ip;
     int socket;
-    const sockaddr_in address;
+    sockaddr_in address;
     Mode mode;
 
     std::chrono::steady_clock::time_point lastActiveAt;
@@ -43,13 +43,13 @@ public:
     Connection(App &app, Uid uid, int socket, sockaddr_in address);
     Connection(const Connection &connection) = delete;
 
-    Uid getUid();
-    Port getPort();
-    std::string getIp();
-    const sockaddr_in &getAdress();
-    Mode getMode();
+    Uid getUid() const;
+    Port getPort() const;
+    std::string getIp() const;
+    const sockaddr_in &getAdress() const;
+    Mode getMode() const;
 
-    void send(Packet &packet);
+    void send(const Packet &packet) const;
 
     void before() override;
     void run() override;

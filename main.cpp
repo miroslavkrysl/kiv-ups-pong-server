@@ -1,14 +1,14 @@
 #include <iostream>
 #include <getopt.h>
 #include <csignal>
+#include "App.h"
 
-#include "Network/Server.h"
-#include "Utils/Shell.h"
-
-Server *server = nullptr;
+App *app = nullptr;
 
 void signalHandler(int signum) {
-    server->stop(false);
+    if (app) {
+        app->stop(false);
+    }
 }
 
 bool isValidPort(unsigned long port)
@@ -18,26 +18,26 @@ bool isValidPort(unsigned long port)
 
 void printHelp(char *name)
 {
-    printf("Pong game server with a simple built-in shell.\n");
-    printf("\n");
-    printf("Usage:\n");
-    printf("%s [-t port] [-i ip_address]\n", name);
-    printf("\n");
-    printf("\t-t port\n");
-    printf("\t\tdefault = 8191\n");
-    printf("\t\tPort number in range 1 - 65535.\n");
-    printf("\n");
-    printf("\t-i ip_address\n");
-    printf("\t\tdefault = 0.0.0.0\n");
-    printf("\t\tIPv4 adrres in the Internet standard dot notation.\n");
-    printf("\n");
-    printf("\t-h\n");
-    printf("\t\tPrint help\n");
+    std::cout << "Pong game server with a simple built-in shell." << std::endl;
+    std::cout << std::endl;
+    std::cout << "Usage:" << std::endl;
+    std::cout << name << " [-t port] [-i ip_address]" << std::endl;
+    std::cout << std::endl;
+    std::cout << "\t-t port" << std::endl;
+    std::cout << "\t\tdefault = 8191" << std::endl;
+    std::cout << "\t\tPort number in range 1 - 65535." << std::endl;
+    std::cout << std::endl;
+    std::cout << "\t-i ip_address" << std::endl;
+    std::cout << "\t\tdefault = 0.0.0.0" << std::endl;
+    std::cout << "\t\tIPv4 address in the Internet standard dot notation." << std::endl;
+    std::cout << std::endl;
+    std::cout << "\t-h";
+    std::cout << "\t\tPrint help";
 }
 
 int main(int argc, char *argv[])
 {
-    uint16_t port = 44445;
+    Port port = App::DEFAULT_PORT;
     std::string ip;
 
     int opt;
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
         case 'p': {
             unsigned long p = std::stoul(std::string{optarg});
             if (!isValidPort(p)) {
-                printf("error: invalid port number");
+                std::cout << "error: invalid port number" << std::endl;
                 exit(EXIT_FAILURE);
             }
             port = static_cast<uint16_t>(p);
@@ -68,16 +68,18 @@ int main(int argc, char *argv[])
     }
 
     try {
-        server = new Server{port, ip};
-        server->start();
+        app = new App{port, ip};
+        app->start();
 
         // register sigterm and sigint handler
         signal(SIGTERM, signalHandler);
         signal(SIGINT, signalHandler);
 
-        server->join();
+        app->join();
+        delete app;
     }
     catch (std::exception &exception) {
+        std::cout << "Exception: " << exception.what();
         exit(EXIT_FAILURE);
     }
 

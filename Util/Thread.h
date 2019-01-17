@@ -2,13 +2,20 @@
 
 #include <thread>
 #include <mutex>
+#include <condition_variable>
+#include <functional>
+#include <atomic>
 
-class Thread
+#include "Lockable.h"
+
+class Thread: public Lockable
 {
     std::thread thread;
+
     std::mutex joinMutex;
-    bool terminate;
-    bool running;
+
+    std::atomic<bool> stopCondition;
+    std::atomic<bool> running;
 
     void execute();
 

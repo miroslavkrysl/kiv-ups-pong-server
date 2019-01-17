@@ -2,6 +2,7 @@
 #include <sstream>
 
 #include "Packet.h"
+#include "../Exceptions.h"
 
 constexpr std::array<char, 3> Packet::TERMINATOR = {"\r\n"};
 
@@ -33,17 +34,26 @@ Packet::Packet(std::string type, std::vector<std::string> items)
       items{std::move(items)}
 {}
 
-std::string Packet::getType()
+Packet::Packet(Packet &&packet) noexcept
+{
+    packet.type = type;
+    type = "";
+
+    packet.items.clear();
+    std::swap(packet.items, items);
+}
+
+std::string Packet::getType() const
 {
     return type;
 }
 
-std::vector<std::string> &Packet::getItems()
+std::vector<std::string> Packet::getItems() const
 {
     return items;
 }
 
-std::string Packet::serialize()
+std::string Packet::serialize() const
 {
     std::string serialized;
 
@@ -85,8 +95,7 @@ void Packet::setType(std::string type)
 {
     this->type = std::move(type);
 }
-
-std::string Packet::toLogString()
+std::string Packet::toLog() const
 {
     std::string serialized;
 

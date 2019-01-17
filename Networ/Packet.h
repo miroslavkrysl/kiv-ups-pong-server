@@ -21,19 +21,15 @@ private:
 public:
     explicit Packet(std::string type = "");
     explicit Packet(std::string type, std::vector<std::string> items);
+    Packet(Packet &&packet) noexcept;
 
-    std::string getType();
-    std::vector<std::string> &getItems();
-    std::string serialize();
+    std::string getType() const;
+    std::vector<std::string> getItems() const;
+    std::string serialize() const;
     void clear();
     void addItem(std::string item);
     void addItems(std::vector<std::string> items);
     void setType(std::string type);
 
-    std::string toLogString();
-};
-
-class PacketException: public std::runtime_error
-{
-    using std::runtime_error::runtime_error;
+    std::string toLog() const;
 };

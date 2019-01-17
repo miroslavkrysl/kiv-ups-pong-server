@@ -7,6 +7,7 @@
 #include "../App.h"
 #include "../Util/Logger.h"
 #include "../Util/Text.h"
+#include "../Exceptions.h"
 
 void Connection::setMode(Connection::Mode mode)
 {
@@ -43,8 +44,12 @@ Connection::Connection(App &app, Uid uid, int socket, sockaddr_in address)
       address(address),
       port(ntohs(address.sin_port))
 {
-    if (socket == -1) {
+    if (socket < 0) {
         throw ConnectionException("invalid connection socket");
+    }
+
+    if (uid < 0) {
+        throw ConnectionException("invalid connection uid");
     }
 
     char ipChars[INET_ADDRSTRLEN];
@@ -66,32 +71,32 @@ Connection::Connection(App &app, Uid uid, int socket, sockaddr_in address)
     }
 }
 
-Uid Connection::getUid()
+Uid Connection::getUid() const
 {
     return uid;
 }
 
-Port Connection::getPort()
+Port Connection::getPort() const
 {
     return port;
 }
 
-std::string Connection::getIp()
+std::string Connection::getIp() const
 {
     return ip;
 }
 
-const sockaddr_in &Connection::getAdress()
+const sockaddr_in &Connection::getAdress() const
 {
     return address;
 }
 
-Connection::Mode Connection::getMode()
+Connection::Mode Connection::getMode() const
 {
     return mode;
 }
 
-void Connection::send(Packet &packet)
+void Connection::send(const Packet &packet) const
 {
     std::string contents = packet.serialize();
 
@@ -194,7 +199,8 @@ void Connection::run()
                 app.getLogger().logCommunication(packet, true, getUid());
 
                 try {
-                    app.getPacketHandler()->handleReceiving(packet);
+//                    app.getPacketHandler()->handleReceiving(packet);
+                    app.getLogger().log("received: " + packet.toLog());
                 }
                 catch (MalformedPacketException &exception) {
                     corruptedPackets++;

@@ -1,7 +1,7 @@
 #include "Thread.h"
 
 Thread::Thread()
-    : terminate{false}
+    : stopCondition{false}
 {}
 
 Thread::~Thread()
@@ -19,11 +19,13 @@ void Thread::execute()
 
 bool Thread::start()
 {
+    Lock lock = Lock{joinMutex};
+
     if (thread.joinable()) {
         return false;
     }
 
-    terminate = false;
+    stopCondition = false;
 
     before();
     thread = std::thread(&Thread::execute, this);
@@ -41,14 +43,15 @@ void Thread::initially()
 
 bool Thread::stop(bool wait)
 {
-    terminate = true;
-
-    if (!thread.joinable()) {
+    if (!running) {
         return false;
     }
 
+    stopCondition = true;
+    notifyAll();
+
     if (wait) {
-        join();
+        return join();
     }
 
     return true;
@@ -64,7 +67,7 @@ void Thread::finally()
 
 bool Thread::join()
 {
-    std::lock_guard<std::mutex> lock{joinMutex};
+    Lock lock = Lock{joinMutex};
 
     if (!thread.joinable()) {
         return false;
@@ -77,7 +80,7 @@ bool Thread::join()
 
 bool Thread::detach()
 {
-    std::lock_guard<std::mutex> lock{joinMutex};
+    Lock lock = Lock{joinMutex};
 
     if (!thread.joinable()) {
         return false;
@@ -89,7 +92,7 @@ bool Thread::detach()
 
 bool Thread::shouldStop()
 {
-    return terminate;
+    return stopCondition;
 }
 
 bool Thread::isRunning()

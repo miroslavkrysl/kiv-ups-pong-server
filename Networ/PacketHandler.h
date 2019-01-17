@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../App.h"
+class App;
 
 class PacketHandler
 {

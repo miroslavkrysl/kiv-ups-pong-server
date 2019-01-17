@@ -5,13 +5,17 @@
 #include "Util/Logger.h"
 #include "Types.h"
 #include "Networ/Server.h"
+#include "Networ/Connection.h"
 #include "Networ/PacketHandler.h"
+#include "Gam/Game.h"
 
 class App: public Thread
 {
+public:
     static const Port DEFAULT_PORT{8191};
     static const size_t DEFAUL_MAX_CONNECTIONS{120};
 
+private:
     Logger logger;
     Server server;
     Stats stats;
@@ -36,15 +40,15 @@ public:
     Stats &getStats();
     PacketHandler &getPacketHandler();
 
-    Connection &addConnection(int socket, sockaddr_in address);
-    Connection &getConnection(Uid uid);
+    Connection *addConnection(int socket, sockaddr_in address);
+    Connection *getConnection(Uid uid);
     size_t clearClosedConnections();
     size_t forEachConnection(std::function<void(Connection &)> function);
 
-    Game &addGame();
-    Connection &getGame(Uid uid);
+    Game *addGame();
+    Game *getGame(Uid uid);
     size_t clearEndedGames();
-    size_t forEachGame(std::function<void(Game &)> function);
+    size_t forEachGame(std::function<void(Game & )> function);
 
     void before() override;
     void run() override;

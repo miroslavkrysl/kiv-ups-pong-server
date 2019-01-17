@@ -19,8 +19,7 @@ Server::Server(App &app, Port port, std::string ip)
 
     if (ip.empty()) {
         address.sin_addr.s_addr = INADDR_ANY;
-    }
-    else {
+    } else {
         address.sin_addr.s_addr = ::inet_addr(ip.c_str());
 
         if (address.sin_addr.s_addr == INADDR_NONE) {
@@ -34,22 +33,26 @@ Server::Server(App &app, Port port, std::string ip)
     this->ip = ipChars;
 }
 
-const sockaddr_in &Server::getAddress()
+const sockaddr_in &
+Server::getAddress() const
 {
     return address;
 }
 
-std::string Server::getIp()
+std::string
+Server::getIp() const
 {
     return ip;
 }
 
-Port Server::getPort()
+Port
+Server::getPort() const
 {
     return port;
 }
 
-void Server::before()
+void
+Server::before()
 {
     int returnValue;
 
@@ -95,7 +98,8 @@ void Server::before()
     }
 }
 
-void Server::run()
+void
+Server::run()
 {
     app.getLogger().log("server running");
 
@@ -116,34 +120,44 @@ void Server::run()
             }
 
             app.getLogger()
-                .log("error while accepting the connection: " + std::string{std::strerror(errno)}, Logger::Level::Error);
+                .log("error while accepting the connection: " + std::string{std::strerror(errno)},
+                     Logger::Level::Error);
             return;
         }
 
         // handle the new connection
-        Connection &connection = app.addConnection(clientSocket, clientAddress);
+        Connection *connection = app.addConnection(clientSocket, clientAddress);
 
-        app.getLogger()
-            .log("accepted new connection: uid = " + std::to_string(connection.getUid())
-                + " ip = " + connection.getIp(), Logger::Level::Success);
+        if (connection) {
+            app.getLogger()
+                .log("new connection accepted: uid = " + std::to_string(connection->getUid())
+                         + " ip = " + connection->getIp()
+                         + " port = " + std::to_string(connection->getPort()), Logger::Level::Success);
+        } else {
+            app.getLogger()
+                .log("new connection refused: server full", Logger::Level::Warning);
+        }
     }
 }
 
-bool Server::stop(bool wait)
+bool
+Server::stop(bool wait)
 {
     // shutdown the socket to break the blocking accept() call
     ::shutdown(socket, SHUT_RDWR);
     return Thread::stop(wait);
 }
 
-void Server::after()
+void
+Server::after()
 {
     ::close(socket);
     socket = -1;
     app.getLogger().log("server stopped");
 }
 
-std::string Server::toLogString()
+std::string
+Server::toLog() const
 {
     std::string string;
 

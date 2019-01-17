@@ -31,63 +31,164 @@ PacketHandler &App::getPacketHandler()
     return packetHandler;
 }
 
-Connection &App::addConnection(int socket, sockaddr_in address)
+Connection *App::addConnection(int socket, sockaddr_in address)
 {
     std::unique_lock<std::mutex> lock(connectionsMutex);
 
     Uid uid = lastConnectionUid++;
 
-    auto inserted = connections.insert(
+    auto inserted = connections.emplace(
         std::piecewise_construct,
         std::forward_as_tuple(uid),
-        std::forward_as_tuple(*this, uid, socket, address);
+        std::forward_as_tuple(*this, uid, socket, address));
 
-    lock.unlock();
+    Connection *connection = &inserted.first->second;
 
-    Connection &connection = (*inserted.first->second);
-    connection.start();
+    if (connections.size() > maxConnections) {
+        connection->send(Packet{"server_full"});
+        return nullptr;
+    }
+
+    connection->start();
 
     return connection;
 }
 
-Connection &App::getConnection(Uid uid)
+Connection *App::getConnection(Uid uid)
 {
-    // TODO
+    std::unique_lock<std::mutex> lock(connectionsMutex);
+
+    auto found = connections.find(uid);
+
+    if (found == connections.end()) {
+        return nullptr;
+    }
+
+    return &found->second;
 }
 
 size_t App::clearClosedConnections()
 {
-    // TODO
+    std::unique_lock<std::mutex> lock{connectionsMutex};
+
+    size_t count{0};
+
+    auto connectionsIt = connections.begin();
+    while (connectionsIt != connections.end()) {
+
+        if (!connectionsIt->second.isRunning()) {
+            connectionsIt = connections.erase(connectionsIt);
+            count++;
+        } else {
+            connectionsIt++;
+        }
+    }
+
+    return count;
 }
+
 size_t App::forEachConnection(std::function<void(Connection &)> function)
 {
-    // TODO
+    std::unique_lock<std::mutex> lock{connectionsMutex};
+
+    size_t count{0};
+
+    for (auto &connection : connections) {
+        function(connection.second);
+        count++;
+    }
+
+    return count;
 }
-Game &App::addGame()
+
+Game *App::addGame()
 {
-    // TODO
+    std::unique_lock<std::mutex> lock(gamesMutex);
+
+    Uid uid = lastGameUid++;
+
+    auto inserted = games.emplace(
+        std::piecewise_construct,
+        std::forward_as_tuple(uid),
+        std::forward_as_tuple(*this, uid));
+
+    Game *game = &inserted.first->second;
+
+    game->start();
+
+    return game;
 }
-Connection &App::getGame(Uid uid)
+
+Game *App::getGame(Uid uid)
 {
-    // TODO
+    std::unique_lock<std::mutex> lock(gamesMutex);
+
+    auto found = games.find(uid);
+
+    if (found == games.end()) {
+        return nullptr;
+    }
+
+    return &found->second;
 }
+
 size_t App::clearEndedGames()
 {
-    // TODO
+    std::unique_lock<std::mutex> lock{gamesMutex};
+
+    size_t count{0};
+
+    auto gamesIt = games.begin();
+    while (gamesIt != games.end()) {
+
+        if (!gamesIt->second.isRunning()) {
+            gamesIt = games.erase(gamesIt);
+            count++;
+        } else {
+            gamesIt++;
+        }
+    }
+
+    return count;
 }
-size_t App::forEachGame(std::function<void(Game &)> function)
+
+size_t App::forEachGame(std::function<void(Game & )> function)
 {
-    // TODO
+    std::unique_lock<std::mutex> lock{gamesMutex};
+
+    size_t count{0};
+
+    for (auto &game : games) {
+        function(game.second);
+        count++;
+    }
+
+    return count;
 }
+
 void App::before()
 {
-    // TODO
+    logger.log("starting application");
+    server.start();
 }
+
 void App::run()
 {
-    // TODO
+    while (!shouldStop()) {
+        clearClosedConnections();
+        clearEndedGames();
+
+        auto lock = acquireLock();
+        waitFor(lock, std::chrono::seconds{10});
+    }
 }
+
 void App::after()
 {
-    // TODO
+    logger.log("closing application");
+
+    server.stop(true);
+    forEachConnection([](Connection &connection) {
+        connection.stop(true);
+    });
 }

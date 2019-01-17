@@ -21,15 +21,15 @@ class Server: public Thread
 public:
     explicit Server(App &app, Port port, std::string ip = "");
 
-    const sockaddr_in &getAddress();
-    std::string getIp();
-    Port getPort();
+    const sockaddr_in &getAddress() const;
+    std::string getIp() const;
+    Port getPort() const;
 
     void before() override;
     void run() override;
     bool stop(bool wait) override;
     void after() override;
 
-    std::string toLogString();
+    std::string toLog() const;
 };
 
