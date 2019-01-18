@@ -203,6 +203,10 @@ void Connection::run()
                     corruptedPackets = 0;
                     app.getStats().addPacketsReceived(1);
                 }
+                catch (MalformedPacketException &exception) {
+                    corruptedPackets++;
+                    send(Packet{"malformed_packet"});
+                }
                 catch (PacketException &exception) {
                     corruptedPackets++;
                     app.getStats().addPacketsDropped(1);
@@ -246,4 +250,5 @@ void Connection::after()
     ::close(socket);
     socket = -1;
     app.getLogger().log(std::to_string(uid) + " - connection closed", Logger::Level::Warning);
+    app.notifyOne();
 }

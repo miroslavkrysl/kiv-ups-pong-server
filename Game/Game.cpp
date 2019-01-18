@@ -9,6 +9,8 @@ Game::Game(App &app, Uid uid)
       scoreRight(0),
       playerUidLeft(-1),
       playerUidRight(-1),
+      playerReadyLeft(false),
+      playerReadyRight(false),
       maxScore{15},
       serviceSide{Side::Left},
       gamePhase{GamePhase::New}
@@ -403,4 +405,6 @@ void Game::after()
     Packet packet{"game_ended"};
     sendPacket(playerUidLeft, packet);
     sendPacket(playerUidRight, packet);
+
+    app.notifyOne();
 }

@@ -57,6 +57,8 @@ App::ConnectionIterator App::removeConnection(ConnectionIterator it)
     removeNickname(connection.getUid());
 
     connection.stop(true);
+
+    notifyOne();
     return connections.erase(it);
 }
 
@@ -86,6 +88,8 @@ App::GameIterator App::removeGame(GameIterator it)
     }
 
     game.stop(true);
+
+    notifyOne();
     return games.erase(it);
 }
 
@@ -260,11 +264,7 @@ void App::leaveGame(Uid connectionUid)
 
     game.eventPlayerLeave(connectionUid);
 
-    logger.log("1");
-
     removeConnectionGame(connectionUid);
-
-    logger.log("1");
 }
 
 Game &App::getGame(Uid uid)
