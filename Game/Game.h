@@ -8,7 +8,7 @@
 #include "BallState.h"
 #include "PlayerState.h"
 #include "../Types.h"
-#include "../Util/Thread.h"
+#include "../Utils/Thread.h"
 #include "../Network/Packet.h"
 
 class App;
@@ -64,6 +64,7 @@ public:
     Game(App &app, Uid uid);
 
     Uid getUid();
+    Uid getPlayerUid(Side side);
 
     void eventPlayerJoin(Uid uid);
     void eventPlayerReady(Uid uid);

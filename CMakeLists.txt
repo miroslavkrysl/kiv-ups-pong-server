@@ -9,11 +9,12 @@ add_executable(ups main.cpp
         Exceptions.h
         Types.cpp Types.h
 
-        Util/Logger.cpp Util/Logger.h
-        Util/Text.cpp Util/Text.h
-        Util/Stats.cpp Util/Stats.h
-        Util/Thread.cpp Util/Thread.h
-        Util/Lockable.cpp Util/Lockable.h
+        Utils/Logger.cpp Utils/Logger.h
+        Utils/Shell.cpp Utils/Shell.h
+        Utils/Text.cpp Utils/Text.h
+        Utils/Stats.cpp Utils/Stats.h
+        Utils/Thread.cpp Utils/Thread.h
+        Utils/Lockable.cpp Utils/Lockable.h
 
         Network/Server.cpp Network/Server.h
         Network/Connection.cpp Network/Connection.h

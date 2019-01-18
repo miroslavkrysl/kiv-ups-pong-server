@@ -5,6 +5,7 @@
 
 App::App(Port port, std::string ip, size_t maxConnections)
     : logger{"server.log", "communication.log", "stats.log"},
+      shell{*this},
       server{*this, port, std::move(ip)},
       packetHandler{*this},
       lastConnectionUid{0},
@@ -325,6 +326,7 @@ void App::before()
 {
     logger.log("starting application");
     server.start();
+    shell.start();
 }
 
 void App::run()

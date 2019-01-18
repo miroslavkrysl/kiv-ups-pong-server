@@ -5,8 +5,8 @@
 
 #include "Connection.h"
 #include "../App.h"
-#include "../Util/Logger.h"
-#include "../Util/Text.h"
+#include "../Utils/Logger.h"
+#include "../Utils/Text.h"
 #include "../Exceptions.h"
 
 Connection::Connection(App &app, Uid uid, int socket, sockaddr_in address)

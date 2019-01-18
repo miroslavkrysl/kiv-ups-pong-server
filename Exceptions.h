@@ -51,6 +51,13 @@ class LoggerException: public AppException
     using AppException::AppException;
 };
 
+// shell
+
+class UnknownCommandException: public AppException
+{
+    using AppException::AppException;
+};
+
 // server
 
 class ServerException: public AppException
@@ -113,10 +120,3 @@ class AlreadyInGameException: public GameException
 {
     using GameException::GameException;
 };
-
-
-//
-//class InvalidPacketException: public PacketException
-//{
-//    using PacketException::PacketException;
-//};

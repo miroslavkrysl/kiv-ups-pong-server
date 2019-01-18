@@ -4,7 +4,10 @@
 #include <unordered_map>
 
 #include "Types.h"
-#include "Util/Logger.h"
+#include "Utils/Logger.h"
+#include "Utils/Stats.h"
+#include "Utils/Shell.h"
+#include "Utils/Thread.h"
 #include "Network/Server.h"
 #include "Network/Connection.h"
 #include "Network/PacketHandler.h"
@@ -21,6 +24,7 @@ public:
 
 private:
     Logger logger;
+    Shell shell;
     Server server;
     Stats stats;
     PacketHandler packetHandler;

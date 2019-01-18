@@ -5,7 +5,7 @@
 #include <string>
 
 #include "../Types.h"
-#include "../Util/Thread.h"
+#include "../Utils/Thread.h"
 
 class App;
 

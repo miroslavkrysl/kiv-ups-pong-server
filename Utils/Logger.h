@@ -3,7 +3,7 @@
 #include <string>
 #include <fstream>
 
-#include "../Util/Stats.h"
+#include "../Utils/Stats.h"
 #include "../Network/Packet.h"
 #include "../Network/Connection.h"
 

@@ -148,6 +148,14 @@ Uid Game::getUid()
     return uid;
 }
 
+Uid Game::getPlayerUid(Side side)
+{
+    switch (side) {
+    case Side::Left: { return playerUidLeft; }
+    case Side::Right: { return playerUidRight; }
+    }
+}
+
 void Game::eventPlayerJoin(Uid uid)
 {
     auto lock = acquireLock();
