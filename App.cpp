@@ -228,6 +228,13 @@ Game &App::joinGame(Uid uid)
 {
     std::unique_lock<std::recursive_mutex> lock(pendingGameMutex);
 
+    try {
+        getNickname(uid);
+    }
+    catch (NoNicknameException &exception) {
+        throw NotLoggedException("player is not logged");
+    }
+
     Game *game;
 
     if (pendingGame && pendingGame->isRunning()) {
@@ -238,6 +245,8 @@ Game &App::joinGame(Uid uid)
         game = pendingGame;
         game->start();
     }
+
+    addConnectionGame(uid, game->getUid());
 
     game->eventPlayerJoin(uid);
 
@@ -251,7 +260,11 @@ void App::leaveGame(Uid connectionUid)
 
     game.eventPlayerLeave(connectionUid);
 
+    logger.log("1");
+
     removeConnectionGame(connectionUid);
+
+    logger.log("1");
 }
 
 Game &App::getGame(Uid uid)

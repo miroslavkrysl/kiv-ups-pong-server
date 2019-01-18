@@ -200,7 +200,6 @@ void Connection::run()
 
                 try {
                     app.getPacketHandler().handleIncomingPacket(uid, packet);
-                    app.getLogger().log("received: " + packet.toLog());
                     corruptedPackets = 0;
                     app.getStats().addPacketsReceived(1);
                 }

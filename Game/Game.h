@@ -57,7 +57,7 @@ private:
     Side getPlayerSide(Uid uid);
     Uid getOpponent(Uid uid);
 
-    void sendPacket(Uid, Packet packet);
+    void sendPacket(Uid uid, Packet packet);
 
 public:
 

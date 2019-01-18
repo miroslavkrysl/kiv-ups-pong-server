@@ -10,13 +10,14 @@ Game::Game(App &app, Uid uid)
       playerUidLeft(-1),
       playerUidRight(-1),
       maxScore{15},
-      serviceSide{Side::Left}
+      serviceSide{Side::Left},
+      gamePhase{GamePhase::New}
 {}
 
 PlayerState Game::expectedPlayerState(const PlayerState &state, Timestamp timestamp)
 {
     if (state.timestamp() > timestamp) {
-        throw GamePlayException("player state timestamp is in future");
+        throw ImpossiblePlayerStateException("player state timestamp is in future");
     }
 
     double seconds = (timestamp - state.timestamp()) / 1000.0;
@@ -135,7 +136,7 @@ Uid Game::getOpponent(Uid uid)
     }
 }
 
-void Game::sendPacket(Uid, Packet packet)
+void Game::sendPacket(Uid uid, Packet packet)
 {
     app.getPacketHandler().handleOutgoingPacket(uid, packet);
 }
@@ -150,11 +151,15 @@ void Game::eventPlayerJoin(Uid uid)
     auto lock = acquireLock();
 
     if (gamePhase != GamePhase::New) {
-        throw GameEventException("can not join more players");
+        throw GameException("can not join more players");
     }
 
     if (uid < 0) {
         throw GameException("invalid player uid");
+    }
+
+    if (uid == playerUidLeft != uid == playerUidRight) {
+        throw AlreadyInGameException("player " + std::to_string(uid) + " is already in game " + std::to_string(this->uid));
     }
 
     Packet packetJoined{"joined"};
@@ -192,7 +197,7 @@ void Game::eventPlayerReady(Uid uid)
     auto lock = acquireLock();
 
     if (gamePhase != GamePhase::Waiting) {
-        throw GameEventException("can not accept ready in playing phase");
+        throw GamePhaseException("can not accept ready in playing phase");
     }
 
     Packet packetOpponentReady{"opponent_ready"};
@@ -235,7 +240,7 @@ void Game::eventPlayerUpdate(Uid uid, PlayerState newPlayerState)
     auto lock = acquireLock();
 
     if (gamePhase != GamePhase::Playing && gamePhase != GamePhase::Waiting) {
-        throw GameEventException("can not update player while not playing");
+        throw GamePhaseException("can not update player while not playing");
     }
 
     if (isInPast(newPlayerState.timestamp())) {
@@ -273,7 +278,7 @@ void Game::eventBallHit(BallState newBallState)
     auto lock = acquireLock();
 
     if (gamePhase != GamePhase::Playing) {
-        throw GameEventException("can not hit ball while not playing");
+        throw GamePhaseException("can not hit ball while not playing");
     }
 
     Packet packet{"ball_hit", ballState.itemize()};
@@ -289,7 +294,7 @@ void Game::eventBallMiss(Side winner)
     auto lock = acquireLock();
 
     if (gamePhase != GamePhase::Playing) {
-        throw GameEventException("can not miss ball while not playing");
+        throw GamePhaseException("can not miss ball while not playing");
     }
 
     getScore(winner)++;
@@ -324,7 +329,7 @@ void Game::eventPlayerRestart(Uid uid)
     auto lock = acquireLock();
 
     if (gamePhase != GamePhase::GameOver) {
-        throw GameEventException("can not accept ready in playing phase");
+        throw GamePhaseException("can not accept ready in playing phase");
     }
 
     Packet packetOpponentReady{"opponent_ready"};
@@ -364,25 +369,28 @@ void Game::run()
 
     while (!shouldStop()) {
 
-        auto now = app.getCurrentTimestamp();
+        auto nextUpdateAt = std::chrono::system_clock::now();
 
-        // check whether the ball reached the side
-        if ((ballState.timestamp() - app.getCurrentTimestamp()) < 0 + TIME_THRESHOLD.count()) {
+        if (gamePhase == GamePhase::Playing) {
+            // check whether the ball reached the side
+            if ((ballState.timestamp() - app.getCurrentTimestamp()) < 0 + TIME_THRESHOLD.count()) {
 
-            // get player on turn
-            PlayerState playerState = getPlayerState(ballState.side());
-            PlayerState expectedState = expectedPlayerState(playerState, now);
+                // get player on turn
+                PlayerState playerState = getPlayerState(ballState.side());
+                PlayerState expectedState = expectedPlayerState(playerState, app.getCurrentTimestamp());
 
-            // calculate hit
-            if (canHit(expectedState, ballState)) {
-                eventBallHit(nextBallState(ballState, false));
-            } else {
-                eventBallMiss(ballState.side());
+                // calculate hit
+                if (canHit(expectedState, ballState)) {
+                    eventBallHit(nextBallState(ballState, false));
+                } else {
+                    eventBallMiss(ballState.side());
+                }
             }
-        }
 
-        auto nextUpdateAt = std::chrono::system_clock::now()
-            + std::chrono::milliseconds{ballState.timestamp() - now};
+            nextUpdateAt += std::chrono::milliseconds{ballState.timestamp() - app.getCurrentTimestamp()};
+        } else {
+            nextUpdateAt += std::chrono::seconds{10};
+        }
 
         auto lock = acquireLock();
         waitUntil(lock, nextUpdateAt, [this] { return gamePhase == GamePhase::Playing; });

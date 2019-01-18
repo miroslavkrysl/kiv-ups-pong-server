@@ -99,12 +99,17 @@ class GameTypeException: public GameException
     using GameException::GameException;
 };
 
-class GameEventException: public GameException
+class GamePhaseException: public GameException
 {
     using GameException::GameException;
 };
 
-class GamePlayException: public GameException
+class ImpossiblePlayerStateException: public GameException
+{
+    using GameException::GameException;
+};
+
+class AlreadyInGameException: public GameException
 {
     using GameException::GameException;
 };

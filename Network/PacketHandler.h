@@ -38,6 +38,8 @@ class PacketHandler
     void handleRestart(Uid uid, Packet packet);
     void handleState(Uid uid, Packet packet);
 
+    void validateItemsCount(Packet packet, size_t count);
+
 public:
     explicit PacketHandler(App &app);
     void handleIncomingPacket(Uid uid, const Packet &packet);
