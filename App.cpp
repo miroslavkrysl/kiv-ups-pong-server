@@ -76,10 +76,14 @@ Game &App::addGame()
 
 App::GameIterator App::removeGame(GameIterator it)
 {
-    std::unique_lock<std::recursive_mutex> lock(gamesMutex);
+    std::unique_lock<std::recursive_mutex> lockG(gamesMutex);
+    std::unique_lock<std::recursive_mutex> lockPG(pendingGameMutex);
 
-    // throws GameNotExistsException if not present
     Game &game = it->second;
+
+    if (pendingGame && pendingGame->getUid() == game.getUid()) {
+        pendingGame = nullptr;
+    }
 
     game.stop(true);
     return games.erase(it);
@@ -90,19 +94,6 @@ void App::addConnectionGame(Uid connectionUid, Uid gameUid)
     std::unique_lock<std::recursive_mutex> lock(connectionsGamesMutex);
 
     auto inserted = connectionsGames.emplace(connectionUid, gameUid);
-}
-
-Game &App::getConnectionGame(Uid connectionUid)
-{
-    std::unique_lock<std::recursive_mutex> lock(connectionsGamesMutex);
-
-    auto found = connectionsGames.find(connectionUid);
-
-    if (found == connectionsGames.end()) {
-        throw NotInGameException{"connection " + std::to_string(connectionUid) + " is not in a game"};
-    }
-
-    return getGame(found->second);
 }
 
 void App::removeConnectionGame(Uid connectionUid)
@@ -151,7 +142,6 @@ size_t App::clearEndedGames()
 
     return count;
 }
-
 
 Logger &App::getLogger()
 {
@@ -275,6 +265,19 @@ Game &App::getGame(Uid uid)
     }
 
     return found->second;
+}
+
+Game &App::getConnectionGame(Uid connectionUid)
+{
+    std::unique_lock<std::recursive_mutex> lock(connectionsGamesMutex);
+
+    auto found = connectionsGames.find(connectionUid);
+
+    if (found == connectionsGames.end()) {
+        throw NotInGameException{"connection " + std::to_string(connectionUid) + " is not in a game"};
+    }
+
+    return getGame(found->second);
 }
 
 size_t App::forEachConnection(std::function<void(Connection &)> function)

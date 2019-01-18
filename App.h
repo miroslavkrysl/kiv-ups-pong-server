@@ -51,7 +51,6 @@ private:
     GameIterator removeGame(GameIterator it);
 
     void addConnectionGame(Uid connectionUid, Uid gameUid);
-    Game &getConnectionGame(Uid connectionUid);
     void removeConnectionGame(Uid uid);
 
     size_t clearClosedConnections();
@@ -76,6 +75,7 @@ public:
     Game &joinGame(Uid connectionUid);
     void leaveGame(Uid connectionUid);
     Game &getGame(Uid uid);
+    Game &getConnectionGame(Uid connectionUid);
 
     size_t forEachConnection(std::function<void(Connection &)> function);
     size_t forEachGame(std::function<void(Game &)> function);

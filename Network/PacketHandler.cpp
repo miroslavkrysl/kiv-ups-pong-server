@@ -23,11 +23,15 @@ void PacketHandler::handleIncomingPacket(Uid uid, const Packet &packet)
     }
     catch (AlreadyLoggedException &exception) {
         handleOutgoingPacket(uid, Packet{"already_logged"});
-        throw NonContextualPacketException{"player already logged"};
+        throw NonContextualPacketException{"player is already logged"};
     }
     catch (NotLoggedException &exception) {
         handleOutgoingPacket(uid, Packet{"not_logged"});
-        throw NonContextualPacketException{"player not logged"};
+        throw NonContextualPacketException{"player is not logged"};
+    }
+    catch (NotInGameException &exception) {
+        handleOutgoingPacket(uid, Packet{"not_in_game"});
+        throw NonContextualPacketException{"player is not in a game"};
     }
     catch (GameTypeException &exception) {
         throw MalformedPacketException{exception.what()};
@@ -90,20 +94,28 @@ void PacketHandler::handleLeave(Uid uid, Packet packet)
 
 void PacketHandler::handleTime(Uid uid, Packet packet)
 {
-    // TODO
+    auto items = packet.getItems();
+
+    if (items.size() != 1) {
+        throw MalformedPacketException{"time packet must have only 1 argument: timestamp"};
+    }
+
+    packet.addItem(timestampToStr(app.getCurrentTimestamp()));
+    handleOutgoingPacket(uid, packet);
 }
 
 void PacketHandler::handleReady(Uid uid, Packet packet)
 {
-    // TODO
+    app.getConnectionGame(uid).eventPlayerReady(uid);
 }
 
 void PacketHandler::handleRestart(Uid uid, Packet packet)
 {
-    // TODO
+    app.getConnectionGame(uid).eventPlayerRestart(uid);
 }
 
 void PacketHandler::handleState(Uid uid, Packet packet)
 {
-    // TODO
+    PlayerState state{packet.getItems()};
+    app.getConnectionGame(uid).eventPlayerUpdate(uid, state);
 }

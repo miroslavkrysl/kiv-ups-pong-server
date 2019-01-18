@@ -63,6 +63,8 @@ public:
 
     Game(App &app, Uid uid);
 
+    Uid getUid();
+
     void eventPlayerJoin(Uid uid);
     void eventPlayerReady(Uid uid);
     void eventPlayerUpdate(Uid uid, PlayerState playerState);

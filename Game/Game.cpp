@@ -35,8 +35,7 @@ PlayerState Game::expectedPlayerState(const PlayerState &state, Timestamp timest
 
     if (position > PLAYER_POSITION_MAX) {
         position = PLAYER_POSITION_MAX;
-    }
-    else if (position < PLAYER_POSITION_MIN) {
+    } else if (position < PLAYER_POSITION_MIN) {
         position = PLAYER_POSITION_MIN;
     }
 
@@ -121,8 +120,7 @@ Side Game::getPlayerSide(Uid uid)
 {
     if (playerUidLeft == uid) {
         return Side::Left;
-    }
-    else if (playerUidRight == uid) {
+    } else if (playerUidRight == uid) {
         return Side::Right;
     }
 
@@ -137,10 +135,14 @@ Uid Game::getOpponent(Uid uid)
     }
 }
 
-
 void Game::sendPacket(Uid, Packet packet)
 {
     app.getPacketHandler().handleOutgoingPacket(uid, packet);
+}
+
+Uid Game::getUid()
+{
+    return uid;
 }
 
 void Game::eventPlayerJoin(Uid uid)
@@ -171,8 +173,8 @@ void Game::eventPlayerJoin(Uid uid)
 
         sendPacket(playerUidRight, packetJoined);
 
-        sendPacket(playerUidRight, Packet{"opponent_joined",{app.getNickname(playerUidLeft)}});
-        sendPacket(playerUidLeft, Packet{"opponent_joined",{app.getNickname(playerUidRight)}});
+        sendPacket(playerUidRight, Packet{"opponent_joined", {app.getNickname(playerUidLeft)}});
+        sendPacket(playerUidLeft, Packet{"opponent_joined", {app.getNickname(playerUidRight)}});
 
         Packet packetNewRound{"new_round"};
         packetNewRound.addItem(scoreToStr(scoreLeft));
@@ -383,7 +385,7 @@ void Game::run()
             + std::chrono::milliseconds{ballState.timestamp() - now};
 
         auto lock = acquireLock();
-        waitUntil(lock, nextUpdateAt, [this]{ return gamePhase == GamePhase::Playing;});
+        waitUntil(lock, nextUpdateAt, [this] { return gamePhase == GamePhase::Playing; });
     }
 
 }
