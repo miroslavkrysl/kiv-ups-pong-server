@@ -126,16 +126,17 @@ Server::run()
         }
 
         // handle the new connection
-        Connection *connection = app.addConnection(clientSocket, clientAddress);
+        try {
+            Connection &connection = app.registerConnection(clientSocket, clientAddress);
 
-        if (connection) {
             app.getLogger()
-                .log("new connection accepted: uid = " + std::to_string(connection->getUid())
-                         + " ip = " + connection->getIp()
-                         + " port = " + std::to_string(connection->getPort()), Logger::Level::Success);
-        } else {
+                .log("connection accepted: uid = " + std::to_string(connection.getUid())
+                         + " ip = " + connection.getIp()
+                         + " port = " + std::to_string(connection.getPort()), Logger::Level::Success);
+        }
+        catch (ServerFullException &exception) {
             app.getLogger()
-                .log("new connection refused: server full", Logger::Level::Warning);
+                .log("connection refused: server full", Logger::Level::Warning);
         }
     }
 }

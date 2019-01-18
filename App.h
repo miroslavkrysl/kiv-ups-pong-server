@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <unordered_map>
 
 #include "Types.h"
 #include "Util/Logger.h"
@@ -15,6 +16,9 @@ public:
     static const Port DEFAULT_PORT{8191};
     static const size_t DEFAUL_MAX_CONNECTIONS{120};
 
+    typedef std::unordered_map<Uid, Connection>::iterator ConnectionIterator;
+    typedef std::unordered_map<Uid, Game>::iterator GameIterator;
+
 private:
     Logger logger;
     Server server;
@@ -24,16 +28,34 @@ private:
     std::unordered_map<Uid, Game> games;
     std::unordered_map<Uid, Uid> connectionsGames;
     std::unordered_map<Uid, std::string> connectionsNicknames;
-    Game *pendingGame;
 
     size_t maxConnections;
+
     Uid lastConnectionUid;
     Uid lastGameUid;
+    Game *pendingGame;
 
     std::recursive_mutex connectionsMutex;
     std::recursive_mutex gamesMutex;
+    std::recursive_mutex pendingGameMutex;
     std::recursive_mutex connectionsGamesMutex;
     std::recursive_mutex connectionsNicknamesMutex;
+
+    void addNickname(Uid uid, std::string nickname);
+    void removeNickname(Uid uid);
+
+    Connection &addConnection(int socket, sockaddr_in address);
+    ConnectionIterator removeConnection(ConnectionIterator it);
+
+    Game &addGame();
+    GameIterator removeGame(GameIterator it);
+
+    void addConnectionGame(Uid connectionUid, Uid gameUid);
+    Game &getConnectionGame(Uid connectionUid);
+    void removeConnectionGame(Uid uid);
+
+    size_t clearClosedConnections();
+    size_t clearEndedGames();
 
 public:
     explicit App(Port port = DEFAULT_PORT, std::string ip = "", size_t maxConnections = DEFAUL_MAX_CONNECTIONS);
@@ -45,25 +67,17 @@ public:
     PacketHandler &getPacketHandler();
     Timestamp getCurrentTimestamp();
 
-    void addNickname(Uid uid, std::string nickname);
-    std::string getNickname(Uid uid);
-    void removeNickname(Uid uid);
+    Connection &registerConnection(int socket, sockaddr_in address);
+    Connection &getConnection(Uid uid);
+
     void login(Uid uid, std::string nickname);
-    bool isLogged(Uid uid);
+    std::string getNickname(Uid uid);
 
-    Connection *addConnection(int socket, sockaddr_in address);
-    Connection *getConnection(Uid uid);
-    void removeConnection(Uid uid);
-    size_t clearClosedConnections();
-    size_t forEachConnection(std::function<void(Connection &)> function);
-
-    Game *addGame();
-    Game *getGame(Uid uid);
-    Game *joinGame(Uid connectionUid);
+    Game &joinGame(Uid connectionUid);
     void leaveGame(Uid connectionUid);
-    void removeGame(Uid uid);
-    Game *getConnectionGame(Uid connectionUid);
-    size_t clearEndedGames();
+    Game &getGame(Uid uid);
+
+    size_t forEachConnection(std::function<void(Connection &)> function);
     size_t forEachGame(std::function<void(Game &)> function);
 
     void before() override;

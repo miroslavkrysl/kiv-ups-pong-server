@@ -19,6 +19,31 @@ class AlreadyLoggedException: public AppException
     using AppException::AppException;
 };
 
+class ServerFullException: public AppException
+{
+    using AppException::AppException;
+};
+
+class NoNicknameException: public AppException
+{
+    using AppException::AppException;
+};
+
+class NotInGameException: public AppException
+{
+    using AppException::AppException;
+};
+
+class ConnectionNotExistsException: public AppException
+{
+    using AppException::AppException;
+};
+
+class GameNotExistsException: public AppException
+{
+    using AppException::AppException;
+};
+
 // logger
 
 class LoggerException: public AppException
@@ -52,6 +77,11 @@ class MalformedPacketException: public PacketException
     using PacketException::PacketException;
 };
 
+class UnknownPacketException: public PacketException
+{
+    using PacketException::PacketException;
+};
+
 class NonContextualPacketException: public PacketException
 {
     using PacketException::PacketException;
@@ -79,11 +109,6 @@ class GamePlayException: public GameException
     using GameException::GameException;
 };
 
-//class UnknownPacketException: public PacketException
-//{
-//    using PacketException::PacketException;
-//};
-//
 
 //
 //class InvalidPacketException: public PacketException

@@ -199,13 +199,12 @@ void Connection::run()
                 app.getLogger().logCommunication(packet, true, getUid());
 
                 try {
-                    // TODO use packet handler
-//                    app.getPacketHandler()->handleReceiving(packet);
+                    app.getPacketHandler().handleIncomingPacket(uid, packet);
                     app.getLogger().log("received: " + packet.toLog());
                     corruptedPackets = 0;
                     app.getStats().addPacketsReceived(1);
                 }
-                catch (MalformedPacketException &exception) {
+                catch (PacketException &exception) {
                     corruptedPackets++;
                     app.getStats().addPacketsDropped(1);
                 }

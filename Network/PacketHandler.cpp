@@ -13,7 +13,7 @@ void PacketHandler::handleIncomingPacket(Uid uid, const Packet &packet)
     auto typeHandler = PACKET_HANDLERS.find(packet.getType());
 
     if (typeHandler == PACKET_HANDLERS.end()) {
-        app.getStats().addPacketsDropped(1);
+        throw UnknownPacketException{"unknown packet type"};
     }
 
     Handler handler = typeHandler->second;
@@ -23,12 +23,14 @@ void PacketHandler::handleIncomingPacket(Uid uid, const Packet &packet)
     }
     catch (AlreadyLoggedException &exception) {
         handleOutgoingPacket(uid, Packet{"already_logged"});
+        throw NonContextualPacketException{"player already logged"};
     }
     catch (NotLoggedException &exception) {
         handleOutgoingPacket(uid, Packet{"not_logged"});
+        throw NonContextualPacketException{"player not logged"};
     }
-    catch (PacketException &exception) {
-        app.getStats().addPacketsDropped(1);
+    catch (GameTypeException &exception) {
+        throw MalformedPacketException{exception.what()};
     }
     catch (GameException &exception) {
         app.getStats().addPacketsDropped(1);
@@ -37,10 +39,12 @@ void PacketHandler::handleIncomingPacket(Uid uid, const Packet &packet)
 
 void PacketHandler::handleOutgoingPacket(Uid uid, const Packet &packet)
 {
-    Connection *connection = app.getConnection(uid);
-
-    if (connection) {
-        connection->send(packet);
+    try {
+        Connection &connection = app.getConnection(uid);
+        connection.send(packet);
+    }
+    catch (ConnectionNotExistsException &exception){
+        // can not send packet
     }
 }
 
