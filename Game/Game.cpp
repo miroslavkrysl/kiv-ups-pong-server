@@ -47,32 +47,44 @@ PlayerState Game::expectedPlayerState(const PlayerState &state, Timestamp timest
 
 BallState Game::nextBallState(BallState &state, bool fromCenter, Side toSide)
 {
+    double movementWidth = GAME_WIDTH - 2 * BALL_RADIUS;
+    double movementHeight = GAME_HEIGHT - 2 * BALL_RADIUS;
     double radians = M_PI / 180 * state.angle();
-    double width =
-        fromCenter
-        ? (GAME_WIDTH / 2 - BALL_RADIUS)
-        : (GAME_WIDTH - 2 * BALL_RADIUS);
-    long height = (GAME_HEIGHT - 2 * BALL_RADIUS);
+    double halfWidth = movementWidth / 2.0;
+    double halfHeight = movementHeight / 2.0;
+
+    double width = fromCenter ? halfWidth : movementWidth;
 
     double hypotenuse = width / std::cos(std::abs(radians));
+
     auto hLeg = static_cast<long>(std::tan(radians) * width);
 
     double timestamp = hypotenuse / (state.speed() / 1000.0);
     timestamp += state.timestamp();
 
-    long position = hLeg % height;
-    if ((position / height) % 2 == 0) {
-        position *= -1;
+    double y = (radians < 0 ? -1 : 1 ) * (hLeg + state.position()) + halfHeight;
+    int mod = static_cast<int>(y) % static_cast<int>(movementHeight);
+    int n = static_cast<int>(y / movementHeight + (radians < 0 ? 1 : 0));
+
+    switch (n % 2) {
+    case 0: {
+        y = mod;
+        break;
+    }
+    case 1: {
+        y = static_cast<int>(movementHeight - mod);
+        break;
+    }
     }
 
-    position += state.position();
+    y -= halfHeight;
 
     return {
         static_cast<Timestamp>(timestamp),
         fromCenter
         ? toSide
         : state.side() == Side::Left ? Side::Right : Side::Left,
-        static_cast<Position>(position),
+        static_cast<Position>(y),
         randomAngle(randomGenerator),
         randomSpeed(randomGenerator)};
 }

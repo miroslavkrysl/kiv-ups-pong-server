@@ -96,7 +96,7 @@ std::string angleToStr(Angle angle)
 std::string sideToStr(Side side)
 {
     switch (side) {
-    case Side::Left:return "l";
-    case Side::Right:return "r";
+    case Side::Left:return "left";
+    case Side::Right:return "right";
     }
 }

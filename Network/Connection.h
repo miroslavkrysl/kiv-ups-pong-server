@@ -19,8 +19,8 @@ public:
     };
 
     const std::chrono::seconds INACTIVE_TIMEOUT_IDLE{60};
-    const std::chrono::seconds INACTIVE_TIMEOUT_BUSY{10};
-    const timeval RECV_TIMEOUT_IDLE{20, 0};
+    const std::chrono::seconds INACTIVE_TIMEOUT_BUSY{20};
+    const timeval RECV_TIMEOUT_IDLE{10, 0};
     const timeval RECV_TIMEOUT_BUSY{2, 0};
     const timeval SEND_TIMEOUT{1, 0};
     const int CORRUPTED_PACKETS_LIMIT{5};
