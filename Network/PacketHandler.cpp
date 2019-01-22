@@ -68,6 +68,9 @@ void PacketHandler::handleIncomingPacket(Uid uid, const Packet &packet)
         // game is not in the phase to receive this type of packet
         throw MalformedPacketException{exception.what()};
     }
+    catch (GameNotExistsException &exception) {
+        handleOutgoingPacket(uid, Packet{"game_ended"});
+    }
     catch (GameException &exception) {
         app.getLogger().log("game exception problem: " + std::string(exception.what()), Logger::Level::Error);
     }

@@ -30,7 +30,7 @@ typedef uint8_t Score;
 typedef uint16_t Speed;
 typedef int8_t Angle;
 
-const Timestamp START_DELAY{3000};
+const Timestamp START_DELAY{0};
 
 const Size GAME_WIDTH{1920};
 const Size GAME_HEIGHT{1080};
@@ -43,8 +43,8 @@ const Position BALL_POSITION_MIN{-(GAME_HEIGHT / 2) + BALL_RADIUS};
 const Angle ANGLE_MAX{60};
 const Angle ANGLE_MIN{-60};
 
-const Speed BALL_SPEED_MAX{1920};
-const Speed BALL_SPEED_MIN{640};
+const Speed BALL_SPEED_MAX{2000};
+const Speed BALL_SPEED_MIN{600};
 
 const Size PLAYER_HEIGHT{320};
 

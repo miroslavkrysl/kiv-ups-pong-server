@@ -260,10 +260,19 @@ Game &App::joinGame(Uid uid)
 
 void App::leaveGame(Uid connectionUid)
 {
-    // throws NotInGameException if player not in a game
-    Game &game = getConnectionGame(connectionUid);
-
-    game.eventPlayerLeave(connectionUid);
+    try {
+        Game &game = getConnectionGame(connectionUid);
+        game.eventPlayerLeave(connectionUid);
+        if (pendingGame && pendingGame->getUid() == game.getUid()) {
+            pendingGame = nullptr;
+        }
+    }
+    catch (GameNotExistsException &exception) {
+        // game already removed
+    }
+    catch (GameException &exception) {
+        // not in a game, no need to leave
+    }
 
     removeConnectionGame(connectionUid);
 }

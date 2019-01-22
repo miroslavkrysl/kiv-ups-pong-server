@@ -11,17 +11,13 @@ Game::Game(App &app, Uid uid)
       playerUidRight(-1),
       playerReadyLeft(false),
       playerReadyRight(false),
-      maxScore{15},
+      maxScore{10},
       serviceSide{Side::Left},
       gamePhase{GamePhase::New}
 {}
 
 PlayerState Game::expectedPlayerState(const PlayerState &state, Timestamp timestamp)
 {
-    if (state.timestamp() > timestamp) {
-        throw ImpossiblePlayerStateException("player state timestamp is in future");
-    }
-
     double seconds = (timestamp - state.timestamp()) / 1000.0;
 
     int dir;
@@ -97,7 +93,7 @@ bool Game::canHit(const PlayerState &playerState, const BallState &ballState)
 
 bool Game::isInPast(Timestamp timestamp)
 {
-    return timestamp <= app.getCurrentTimestamp();
+    return timestamp <= app.getCurrentTimestamp() + TIME_THRESHOLD.count();
 }
 
 Score &Game::getScore(Side side)
@@ -242,10 +238,12 @@ void Game::eventPlayerReady(Uid uid)
 
         ballState = BallState{
             app.getCurrentTimestamp() + START_DELAY,
-            serviceSide,
+            serviceSide == Side::Left ? Side::Right : Side::Left,
             0,
             0,
             BALL_SPEED_MIN};
+
+        futureBallState = nextBallState(ballState, true, serviceSide);
 
         Packet packetBallReleased{"ball_released", ballState.itemize()};
 
@@ -295,7 +293,7 @@ void Game::eventPlayerLeave(Uid uid)
     stop(false);
 }
 
-void Game::eventBallHit(BallState newBallState)
+void Game::eventBallHit()
 {
     auto lock = acquireLock();
 
@@ -303,12 +301,13 @@ void Game::eventBallHit(BallState newBallState)
         throw GamePhaseException("can not hit ball while not playing");
     }
 
+    ballState = futureBallState;
+    futureBallState = nextBallState(ballState, false);
+
     Packet packet{"ball_hit", ballState.itemize()};
 
     sendPacket(playerUidLeft, packet);
     sendPacket(playerUidRight, packet);
-
-    ballState = newBallState;
 }
 
 void Game::eventBallMiss(Side winner)
@@ -322,7 +321,7 @@ void Game::eventBallMiss(Side winner)
     getScore(winner)++;
     playerReadyLeft = false;
     playerReadyRight = false;
-    serviceSide = winner;
+    serviceSide = winner == Side::Left ? Side::Right : Side::Left;
 
     if (scoreLeft == maxScore || scoreRight == maxScore) {
         gamePhase = GamePhase::GameOver;
@@ -395,17 +394,17 @@ void Game::run()
 
         if (gamePhase == GamePhase::Playing) {
             // check whether the ball reached the side
-            if ((ballState.timestamp() - app.getCurrentTimestamp()) < 0 + TIME_THRESHOLD.count()) {
+            if ((futureBallState.timestamp() - app.getCurrentTimestamp()) < 0 + TIME_THRESHOLD.count()) {
 
                 // get player on turn
-                PlayerState playerState = getPlayerState(ballState.side());
+                PlayerState playerState = getPlayerState(futureBallState.side());
                 PlayerState expectedState = expectedPlayerState(playerState, app.getCurrentTimestamp());
 
                 // calculate hit
-                if (canHit(expectedState, ballState)) {
-                    eventBallHit(nextBallState(ballState, false));
+                if (canHit(expectedState, futureBallState)) {
+                    eventBallHit();
                 } else {
-                    eventBallMiss(ballState.side());
+                    eventBallMiss(futureBallState.side() == Side::Left ? Side::Right : Side::Left);
                 }
             }
 

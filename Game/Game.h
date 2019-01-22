@@ -26,6 +26,7 @@ private:
 
     GamePhase gamePhase;
     BallState ballState;
+    BallState futureBallState;
     PlayerState playerStateLeft;
     PlayerState playerStateRight;
     Uid playerUidLeft;
@@ -70,7 +71,7 @@ public:
     void eventPlayerReady(Uid uid);
     void eventPlayerUpdate(Uid uid, PlayerState playerState);
     void eventPlayerLeave(Uid uid);
-    void eventBallHit(BallState newBallState);
+    void eventBallHit();
     void eventBallMiss(Side winner);
     void eventPlayerRestart(Uid uid);
 
