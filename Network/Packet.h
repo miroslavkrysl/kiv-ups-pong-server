@@ -10,7 +10,7 @@ class Packet
 {
 public:
     static const char DELIMITER{';'};
-    static const std::array<char, 3> TERMINATOR;
+    static const char TERMINATOR{'#'};
     static const size_t MAX_SIZE{1024};
 
     static Packet parse(const std::string &contents);

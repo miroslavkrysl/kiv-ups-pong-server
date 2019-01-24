@@ -354,6 +354,8 @@ void App::run()
             logger.log(std::to_string(count) + " ended game" + (count > 1 ? "s" : "") + " cleared");
         }
 
+        logger.writeStats(stats);
+
         auto lock = acquireLock();
         waitFor(lock, std::chrono::seconds{10});
     }

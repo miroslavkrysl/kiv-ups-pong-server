@@ -45,7 +45,7 @@ BallState Game::nextBallState(BallState &state, bool fromCenter, Side toSide)
 {
     double movementWidth = GAME_WIDTH - 2 * BALL_RADIUS;
     double movementHeight = GAME_HEIGHT - 2 * BALL_RADIUS;
-    double radians = M_PI / 180 * state.angle();
+    double radians = M_PI / 180.0 * state.angle();
     double halfWidth = movementWidth / 2.0;
     double halfHeight = movementHeight / 2.0;
 

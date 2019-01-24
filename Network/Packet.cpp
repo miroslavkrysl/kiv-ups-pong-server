@@ -4,8 +4,6 @@
 #include "Packet.h"
 #include "../Exceptions.h"
 
-constexpr std::array<char, 3> Packet::TERMINATOR = {"\r\n"};
-
 Packet Packet::parse(const std::string &contents)
 {
     // tokenize by delimiter
@@ -55,7 +53,7 @@ std::string Packet::serialize() const
         serialized += item;
     }
 
-    serialized += TERMINATOR.data();
+    serialized += TERMINATOR;
 
     if (serialized.size() >= MAX_SIZE) {
         throw PacketException("packet length exceeded");

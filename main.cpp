@@ -1,6 +1,7 @@
 #include <iostream>
 #include <getopt.h>
 #include <csignal>
+#include <cstdlib>
 #include "App.h"
 
 App *app = nullptr;

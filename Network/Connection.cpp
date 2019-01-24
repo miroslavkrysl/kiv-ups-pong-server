@@ -178,20 +178,8 @@ void Connection::run()
         for (int i = 0; i < bytesRead; ++i) {
             bool endMessage{false};
 
-            // search for the termination symbol
-            for (int j = 0; j < Packet::TERMINATOR.size() - 1; ++j) {
-                if (buffer[i + j] != Packet::TERMINATOR[j]) {
-                    endMessage = false;
-                    break;
-                }
-                endMessage = true;
-            }
-
-            if (endMessage) {
-                // if found, the whole message was received
-
-                //skip termination symbols
-                i += Packet::TERMINATOR.size() - 1;
+            if (buffer[i] == Packet::TERMINATOR) {
+                // if found terminator, the whole message was received
 
                 // handle received message
                 Packet packet = Packet::parse(data);
