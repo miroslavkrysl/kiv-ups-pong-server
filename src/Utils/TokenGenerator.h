@@ -3,6 +3,9 @@
 #include <string>
 #include <random>
 
+/**
+ * The class TokenGenerator contains a logic for the tokens generation.
+ */
 class TokenGenerator
 {
 public:
@@ -13,7 +16,18 @@ public:
     TokenGenerator();
 
     /**
+     * Generate a random token from the given characters.
+     *
+     * @param length The length of the resulting token.
+     * @param characters The set of the characters which will be used for the token generation.
+     *
+     * @return A random token.
+     */
+    std::string GetRandomToken(std::size_t length, const std::string &characters);
+
+    /**
      * Generate a random token.
+     * The default set of characters will be used for the token generation.
      *
      * @param length The length of the resulting token.
      * @return A random token.
