@@ -1,17 +1,9 @@
 #pragma once
 
-#include <functional>
 #include <condition_variable>
-#include <chrono>
-
-typedef std::unique_lock<std::mutex> Lock;
-typedef std::function<bool()> Predicate;
-typedef std::chrono::nanoseconds Duration;
-typedef std::chrono::system_clock::time_point& TimePoint;
-typedef std::cv_status WaitStatus;
-
-class Lockable
+class Monitor
 {
+public:
     mutable std::condition_variable conditionVariable;
     mutable std::mutex mutex;
 
@@ -29,6 +21,5 @@ public:
 
     virtual void notifyOne() const final;
     virtual void notifyAll() const final;
+
 };
-
-
