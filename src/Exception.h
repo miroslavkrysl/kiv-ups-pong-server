@@ -31,7 +31,7 @@ public:
      * @param context The exception context.
      * @param solution The solution proposal.
      */
-    explicit Exception(const std::string &description, const std::string &context = "", const std::string &solution = "");
+    explicit Exception(std::string description, std::string context = "", std::string solution = "");
 
     /**
      * Get the descriptive message of the exception.

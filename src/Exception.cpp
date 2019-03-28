@@ -1,3 +1,7 @@
+#include <utility>
+
+#include <utility>
+
 #include "Exception.h"
 
 const char *Exception::what() const noexcept
@@ -17,8 +21,10 @@ const char *Exception::what() const noexcept
     return message.c_str();
 }
 
-Exception::Exception(const std::string &description, const std::string &context, const std::string &solution)
-    : description(description), context(context), solution(solution)
+Exception::Exception(std::string description, std::string context, std::string solution)
+    : description(std::move(description)),
+      context(std::move(context)),
+      solution(std::move(solution))
 {}
 
 const std::string &Exception::getDescription() const
