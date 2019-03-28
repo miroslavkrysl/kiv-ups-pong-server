@@ -5,7 +5,10 @@ set(CMAKE_CXX_STANDARD 17)
 find_package (Threads REQUIRED)
 
 add_executable(kiv-ups-pongserver src/main.cpp
+        src/Exception.cpp src/Exception.h
+
         src/Network/Socket.cpp src/Network/Socket.h
+#        src/Network/ServerSocket.cpp src/Network/ServerSocket.h
         )
 
 TARGET_LINK_LIBRARIES(kiv-ups-pongserver pthread)
