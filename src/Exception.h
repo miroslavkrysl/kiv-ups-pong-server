@@ -9,12 +9,12 @@
 class Exception: public std::exception
 {
     /**
-     * The description of the error.
+     * The error description.
      */
     std::string description;
 
     /**
-     * The context of the error.
+     * The exception context.
      */
     std::string context;
 
@@ -28,8 +28,8 @@ public:
      * Initialize a new Exception.
      *
      * @param description The error description.
-     * @param context The error context.
-     * @param solution The possible solution.
+     * @param context The exception context.
+     * @param solution The solution proposal.
      */
     explicit Exception(const std::string &description, const std::string &context = "", const std::string &solution = "");
 
@@ -39,4 +39,25 @@ public:
      * @return The descriptive message.
      */
     const char *what() const noexcept override;
+
+    /**
+     * Get the error description.
+     *
+     * @return The error description.
+     */
+    const std::string &getDescription() const;
+
+    /**
+     * Get the exception context.
+     *
+     * @return The exception context.
+     */
+    const std::string &getContext() const;
+
+    /**
+     * Get the solution proposal.
+     *
+     * @return The solution proposal.
+     */
+    const std::string &getSolution() const;
 };

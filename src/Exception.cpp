@@ -20,3 +20,18 @@ const char *Exception::what() const noexcept
 Exception::Exception(const std::string &description, const std::string &context, const std::string &solution)
     : description(description), context(context), solution(solution)
 {}
+
+const std::string &Exception::getDescription() const
+{
+    return description;
+}
+
+const std::string &Exception::getContext() const
+{
+    return context;
+}
+
+const std::string &Exception::getSolution() const
+{
+    return solution;
+}
