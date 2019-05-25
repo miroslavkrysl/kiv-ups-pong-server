@@ -53,7 +53,7 @@ public:
     /**
      * Move assign the Socket.
      *
-     * @param other The original socket.
+     * @param other The original Socket.
      * @return The new Socket.
      */
     Socket &operator=(Socket &&other) noexcept;
