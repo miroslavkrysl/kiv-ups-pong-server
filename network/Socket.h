@@ -11,6 +11,7 @@ namespace pong::network
 class Socket
 {
 public:
+
     /**
      * Value of the empty/invalid/unconnected socket file descriptor.
      */
@@ -22,12 +23,6 @@ public:
     Socket();
 
     /**
-     * Socket destructor.
-     * Calls the close() method.
-     */
-    virtual ~Socket();
-
-    /**
      * Deleted copy constructor.
      *
      * @param other The original Socket.
@@ -35,12 +30,33 @@ public:
     Socket(const Socket &other) = delete;
 
     /**
+     * Move construct the Socket.
+     *
+     * @param other The original Socket.
+     */
+    Socket(Socket &&other) noexcept;
+
+    /**
+     * Socket destructor.
+     * Calls the close() method.
+     */
+    virtual ~Socket();
+
+    /**
      * Deleted copy assignment.
      *
      * @param other The original Socket.
      * @return The copy assigned Socket.
      */
-    Socket& operator=(const Socket &other) = delete;
+    Socket &operator=(const Socket &other) = delete;
+
+    /**
+     * Move assign the Socket.
+     *
+     * @param other The original socket.
+     * @return The new Socket.
+     */
+    Socket &operator=(Socket &&other) noexcept;
 
     /**
      * Close the socket.
@@ -55,6 +71,7 @@ public:
     bool isOpened();
 
 protected:
+
     /**
      * Initialize a new Socket.
      *
@@ -62,22 +79,8 @@ protected:
      */
     explicit Socket(int fileDescriptor);
 
-    /**
-     * Move construct the Socket.
-     *
-     * @param other The original Socket.
-     */
-    Socket(Socket &&other) noexcept;
-
-    /**
-     * Move assign the Socket.
-     *
-     * @param other The original socket.
-     * @return The new Socket.
-     */
-    Socket& operator=(Socket&& other) noexcept;
-
 private:
+
     /**
      * Socket file descriptor.
      */
