@@ -9,32 +9,20 @@ namespace pong
 /**
  * The application base class for exceptions.
  */
-class Exception: public std::exception
+class Exception: virtual public std::exception
 {
     /**
-     * The error description.
+     * The exception description.
      */
     std::string description;
-
-    /**
-     * The exception context.
-     */
-    std::string context;
-
-    /**
-     * The solution proposal.
-     */
-    std::string solution;
 
 public:
     /**
      * Initialize a new Exception.
      *
-     * @param description The error description.
-     * @param context The exception context.
-     * @param solution The solution proposal.
+     * @param description The exception description.
      */
-    explicit Exception(std::string description, std::string context = "", std::string solution = "");
+    explicit Exception(std::string description);
 
     /**
      * Get the descriptive message of the exception.
@@ -44,25 +32,12 @@ public:
     const char *what() const noexcept override;
 
     /**
-     * Get the error description.
+     * Get the nested descriptive messages of the exception
+     * and all nested exceptions.
      *
-     * @return The error description.
+     * @return The nested descriptive messages.
      */
-    const std::string &getDescription() const;
-
-    /**
-     * Get the exception context.
-     *
-     * @return The exception context.
-     */
-    const std::string &getContext() const;
-
-    /**
-     * Get the solution proposal.
-     *
-     * @return The solution proposal.
-     */
-    const std::string &getSolution() const;
+    std::string whatNested() const;
 };
 
 }

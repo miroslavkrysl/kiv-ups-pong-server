@@ -1,48 +1,53 @@
 #include <utility>
+#include <stdexcept>
+#include <sstream>
 
 #include "Exception.h"
 
 namespace pong
 {
 
-const char *Exception::what() const noexcept
-{
-    std::string message;
-
-    message += "Error: " + description;
-
-    if (!solution.empty())
-    {
-        message += "Context: " + context;
-    }
-
-    if (!solution.empty())
-    {
-        message += "Solution: " + solution;
-    }
-
-    return message.c_str();
-}
-
-Exception::Exception(std::string description, std::string context, std::string solution)
-    : description(std::move(description)),
-      context(std::move(context)),
-      solution(std::move(solution))
+Exception::Exception(std::string description)
+    : description(std::move(description))
 {}
 
-const std::string &Exception::getDescription() const
+const char *Exception::what() const noexcept
 {
-    return description;
+    return description.c_str();
 }
 
-const std::string &Exception::getContext() const
+std::string Exception::whatNested() const
 {
-    return context;
-}
+    std::stringstream message;
+    message << what();
 
-const std::string &Exception::getSolution() const
-{
-    return solution;
+    const std::exception *current{this};
+    int depth = 1;
+
+    while (true)
+    {
+        try
+        {
+            std::rethrow_if_nested(*current);
+            break;
+        }
+        catch (std::exception &e)
+        {
+            message << std::endl;
+
+            for (int i = 0; i < depth; ++i)
+            {
+                message << "   ";
+            }
+
+            message << "|- " << e.what();
+
+            current = &e;
+            depth++;
+        }
+    }
+
+    return message.str();
 }
 
 }
