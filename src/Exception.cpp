@@ -22,7 +22,7 @@ std::string Exception::whatNested() const
     message << what();
 
     const std::exception *current{this};
-    int depth = 1;
+    size_t depth = 1;
 
     while (true)
     {
@@ -34,12 +34,7 @@ std::string Exception::whatNested() const
         catch (std::exception &e)
         {
             message << std::endl;
-
-            for (int i = 0; i < depth; ++i)
-            {
-                message << "   ";
-            }
-
+            message << std::string(depth * 3, ' ');
             message << "|- " << e.what();
 
             current = &e;
